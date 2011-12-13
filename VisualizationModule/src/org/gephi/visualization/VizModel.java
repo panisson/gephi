@@ -91,6 +91,12 @@ public class VizModel {
     protected boolean showHulls;
     protected float edgeScale;
     protected float metaEdgeScale;
+    
+    protected String bgImage = "/tmp/background.jpg";
+    protected float[] bgImageDimensions = {-1,-1};
+    protected float[] bgImagePosition = {0,0};
+    protected boolean bgImageFixed = false;
+    
     //Listener
     protected List<PropertyChangeListener> listeners = new ArrayList<PropertyChangeListener>();
     private boolean defaultModel = false;
@@ -266,6 +272,22 @@ public class VizModel {
     public float getMetaEdgeScale() {
         return metaEdgeScale;
     }
+    
+    public String getBGImage() {
+        return bgImage;
+    }
+    
+    public float[] getBGImageDimensions() {
+        return bgImageDimensions;
+    }
+    
+    public float[] getBGImagePosition() {
+        return bgImagePosition;
+    }
+    
+    public boolean isBGImageFixed() {
+        return bgImageFixed;
+    }
 
     //SETTERS
     public void setAdjustByText(boolean adjustByText) {
@@ -361,6 +383,19 @@ public class VizModel {
     public void setMetaEdgeScale(float metaEdgeScale) {
         this.metaEdgeScale = metaEdgeScale;
         fireProperyChange("metaEdgeScale", null, metaEdgeScale);
+    }
+    
+    public void setBGImage(String bgImage) {
+        this.bgImage = bgImage;
+        fireProperyChange("bgImage", null, bgImage);
+    }
+    
+    public void setBGImageSize(float[] size) {
+        this.bgImageDimensions = size;
+    }
+    
+    public void setBGImagePosition(float[] position) {
+        this.bgImagePosition = position;
     }
 
     public GraphLimits getLimits() {

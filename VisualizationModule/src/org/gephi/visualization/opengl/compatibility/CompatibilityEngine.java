@@ -42,7 +42,15 @@ Portions Copyrighted 2011 Gephi Consortium.
 package org.gephi.visualization.opengl.compatibility;
 
 import com.sun.opengl.util.BufferUtil;
+import com.sun.opengl.util.texture.Texture;
+import com.sun.opengl.util.texture.TextureData;
+import com.sun.opengl.util.texture.TextureIO;
 import java.awt.Color;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -84,6 +92,9 @@ public class CompatibilityEngine extends AbstractEngine {
     //Selection
     private ConcurrentLinkedQueue<ModelImpl>[] selectedObjects;
     private boolean anySelected = false;
+    
+    private Texture background;
+    private boolean bgChanged = false;
 
     public CompatibilityEngine() {
         super();
@@ -256,6 +267,9 @@ public class CompatibilityEngine extends AbstractEngine {
 
     @Override
     public void display(GL gl, GLU glu) {
+        
+        setBackground(gl);
+        
         for (Iterator<ModelImpl> itr = octree.getObjectIterator(AbstractEngine.CLASS_NODE); itr.hasNext();) {       //TODO Move this
             ModelImpl obj = itr.next();
             modelClasses[AbstractEngine.CLASS_NODE].getCurrentModeler().chooseModel(obj);
@@ -419,6 +433,33 @@ public class CompatibilityEngine extends AbstractEngine {
         scheduler.cameraMoved.set(true);
         scheduler.mouseMoved.set(true);
         lifeCycle.setInited();
+        
+        if (background == null || bgChanged) {
+            loadTexture(vizController.getVizModel().getBGImage());
+            bgChanged = false;
+        }
+        
+        vizController.getVizModel().addPropertyChangeListener(new PropertyChangeListener() {
+
+            public void propertyChange(PropertyChangeEvent evt) {
+                if (evt.getPropertyName().equals("bgImage")) {
+                    bgChanged = true;
+                }
+            }
+        });
+        
+        
+    }
+    
+    private void loadTexture(String textureFileName) {
+        try {
+            InputStream stream = new FileInputStream(textureFileName);
+            TextureData textureData = TextureIO.newTextureData(stream, false, TextureIO.JPG);
+            background = TextureIO.newTexture(textureData);
+            System.out.println("Background texture changed");
+        } catch (IOException exc) {
+            System.out.println("Unable to load background: "+textureFileName);
+        }
     }
 
     @Override
@@ -933,4 +974,78 @@ public class CompatibilityEngine extends AbstractEngine {
     public Scheduler getScheduler() {
         return scheduler;
     }
+    
+    
+    private void setBackground(GL gl) {
+        
+        if (bgChanged) {
+            loadTexture(vizController.getVizModel().getBGImage());
+            bgChanged = false;
+        }
+        
+        if (background==null) return;
+        
+        boolean fixed = vizController.getVizModel().isBGImageFixed();
+        
+        if (fixed) {
+        
+            gl.glMatrixMode(GL.GL_PROJECTION);
+            gl.glPushMatrix();
+            gl.glOrtho(0, 1, 0, 1, 0, 1);
+
+            gl.glMatrixMode(GL.GL_MODELVIEW);
+            gl.glPushMatrix();
+            gl.glLoadIdentity();
+            
+        }
+	
+	// No depth buffer writes for background.
+        if (!fixed) {
+            gl.glDepthMask( false );
+        }
+        
+//        // Set material properties.
+//        float[] rgba = {1f, 1f, 1f};
+//        gl.glMaterialfv(GL.GL_FRONT, GL.GL_AMBIENT, rgba, 0);
+//        gl.glMaterialfv(GL.GL_FRONT, GL.GL_SPECULAR, rgba, 0);
+//        gl.glMaterialf(GL.GL_FRONT, GL.GL_SHININESS, 0.5f);
+
+        // Apply texture.
+        background.enable();
+        background.bind();
+        
+        // select DECAL to not mix texture with color for shading
+        gl.glTexEnvf( GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_DECAL );
+        
+        float width = vizController.getVizModel().getBGImageDimensions()[0];
+        if (width <= 0) width = background.getWidth();
+        float height = vizController.getVizModel().getBGImageDimensions()[1];
+        if (height <= 0) height = background.getHeight();
+        float[] position = vizController.getVizModel().getBGImagePosition();
+        
+	gl.glBegin( GL.GL_QUADS ); {
+        
+            gl.glTexCoord2f( 0f, 1f );
+            gl.glVertex2f( position[0]-width, position[1]-height );
+            gl.glTexCoord2f( 0f, 0f );
+            gl.glVertex2f( position[0]-width, position[1]+height );
+            gl.glTexCoord2f( 1f, 0f );
+            gl.glVertex2f( position[0]+width, position[1]+height );
+            gl.glTexCoord2f( 1f, 1f );
+            gl.glVertex2f( position[0]+width, position[1]-height );
+          
+	} gl.glEnd();
+
+	gl.glDepthMask( true );
+
+        if (fixed) {
+            gl.glPopMatrix();
+            gl.glMatrixMode(GL.GL_PROJECTION);
+            gl.glPopMatrix();
+            gl.glMatrixMode(GL.GL_MODELVIEW);
+        }
+
+        gl.glDisable(GL.GL_TEXTURE_2D);
+    }
+    
 }
