@@ -42,6 +42,7 @@ Portions Copyrighted 2011 Gephi Consortium.
 package org.gephi.preview;
 
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Point;
 import java.beans.PropertyEditor;
 import java.beans.PropertyEditorManager;
@@ -260,12 +261,11 @@ public class PreviewModelImpl implements PreviewModel {
             String propertyName = property.getName();
             Object propertyValue = property.getValue();
             if (propertyValue != null) {
-                PropertyEditor editor = PropertyEditorManager.findEditor(propertyValue.getClass());
-                if (editor != null) {
+                String text = getValueAsText(propertyValue);
+                if (text != null) {
                     writer.writeStartElement("previewproperty");
                     writer.writeAttribute("name", propertyName);
-                    editor.setValue(propertyValue);
-                    writer.writeCharacters(editor.getAsText());
+                    writer.writeCharacters(text);
                     writer.writeEndElement();
                 }
             }
@@ -277,16 +277,20 @@ public class PreviewModelImpl implements PreviewModel {
             Entry<String, Object> simpleValueEntry;
             simpleValueEntry = simpleValuesIterator.next();
 
+            if (simpleValueEntry.getKey().equals("width")
+                    || simpleValueEntry.getKey().equals("height")) {
+                continue;
+            }
+
             Object value = simpleValueEntry.getValue();
             if (value != null) {
                 Class clazz = value.getClass();
-                PropertyEditor editor = PropertyEditorManager.findEditor(clazz);
-                if (editor != null) {
+                String text = getValueAsText(value);
+                if (text != null) {
                     writer.writeStartElement("previewsimplevalue");
                     writer.writeAttribute("name", simpleValueEntry.getKey());
                     writer.writeAttribute("class", clazz.getName());
-                    editor.setValue(value);
-                    writer.writeCharacters(editor.getAsText());
+                    writer.writeCharacters(text);
                     writer.writeEndElement();
                 }
             }
@@ -324,30 +328,30 @@ public class PreviewModelImpl implements PreviewModel {
                             if (!isSimpleValue) {//Read PreviewProperty:
                                 PreviewProperty p = props.getProperty(propName);
                                 if (p != null) {
+                                    Object value = readValueFromText(reader.getText(), p.getType());
                                     PropertyEditor editor = PropertyEditorManager.findEditor(p.getType());
-                                    if (editor != null) {
-                                        editor.setAsText(reader.getText());
-                                        if (editor.getValue() != null) {
-                                            try {
-                                                p.setValue(editor.getValue());
-                                            } catch (Exception e) {
-                                                e.printStackTrace();
-                                            }
+                                    editor.setAsText(reader.getText());
+                                    if (value != null) {
+                                        try {
+                                            p.setValue(value);
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
                                         }
                                     }
                                 }
                             } else {//Read preview simple value:
                                 if (simpleValueClass != null) {
-                                    try {
-                                        PropertyEditor editor = PropertyEditorManager.findEditor(Class.forName(simpleValueClass));
-                                        if (editor != null) {
-                                            editor.setAsText(reader.getText());
-                                            if (editor.getValue() != null) {
-                                                props.putValue(propName, editor.getValue());
+                                    if (!propName.equals("width")
+                                            && !propName.equals("height")) {
+                                        try {
+                                            Object value = readValueFromText(reader.getText(), Class.forName(simpleValueClass));
+                                            if (value != null) {
+                                                props.putValue(propName, value);
                                             }
+                                        } catch (ClassNotFoundException e) {
+                                            e.printStackTrace();
                                         }
-                                    } catch (ClassNotFoundException e) {
-                                        e.printStackTrace();
+
                                     }
                                 }
                             }
@@ -360,6 +364,40 @@ public class PreviewModelImpl implements PreviewModel {
                     }
                     name = null;
                     break;
+            }
+        }
+    }
+
+    private String getValueAsText(Object value) {
+        if (value.getClass().equals(Font.class)) {
+            Font f = (Font) value;
+            return String.format("%s-%d-%d", f.getName(), f.getStyle(), f.getSize()); //bug 551877
+        } else {
+            PropertyEditor editor = PropertyEditorManager.findEditor(value.getClass());
+            if (editor != null) {
+                editor.setValue(value);
+                return editor.getAsText();
+            } else {
+                return null;
+            }
+        }
+    }
+
+    private Object readValueFromText(String valueStr, Class valueClass) {
+        if (valueClass.equals(Font.class)) {
+            try {
+                String parts[] = valueStr.split("-");
+                return new Font(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));//bug 551877
+            } catch (Exception e) {
+                return null;
+            }
+        } else {
+            PropertyEditor editor = PropertyEditorManager.findEditor(valueClass);
+            if (editor != null) {
+                editor.setAsText(valueStr);
+                return editor.getValue();
+            } else {
+                return null;
             }
         }
     }

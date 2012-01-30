@@ -42,14 +42,16 @@ Portions Copyrighted 2011 Gephi Consortium.
 package org.gephi.timeline.api;
 
 /**
- *
+ * Timeline model event.
+ * 
  * @author Mathieu Bastian
+ * @see TimelineModelListener
  */
 public final class TimelineModelEvent {
 
     public enum EventType {
 
-        VISIBLE_INTERVAL, MIN_CHANGED, MAX_CHANGED
+        MODEL, MIN_MAX, INTERVAL, CUSTOM_BOUNDS, ENABLED, PLAY_START, PLAY_STOP, CHART, VALID_BOUNDS
     };
     private final EventType type;
     private final TimelineModel source;

@@ -1,6 +1,6 @@
 /*
-Copyright 2008-2010 Gephi
-Authors : Mathieu Bastian, Mathieu Jacomy, Julian Bilcke, Patrick J. McSweeney
+Copyright 2008-2011 Gephi
+Authors : Mathieu Bastian
 Website : http://www.gephi.org
 
 This file is part of Gephi.
@@ -42,8 +42,10 @@ Portions Copyrighted 2011 Gephi Consortium.
 package org.gephi.timeline.api;
 
 /**
- *
- * @author Julian Bilcke <julian.bilcke@gmail.com>
+ * Timeline model listener.
+ * 
+ * @author Julian Bilcke
+ * @see TimelineModelEvent
  */
 public interface TimelineModelListener {
 

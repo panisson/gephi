@@ -79,7 +79,7 @@ public final class MergeNodesUI extends JPanel implements ManipulatorUI {
     private StrategyComboBox[] strategiesComboBoxes;
     private StrategyConfigurationButton[] strategiesConfigurationButtons;
 
-    /** Creates new form ImportCSVUIVisualPanel2 */
+    /** Creates new form MergeNodesUI */
     public MergeNodesUI() {
         initComponents();
     }

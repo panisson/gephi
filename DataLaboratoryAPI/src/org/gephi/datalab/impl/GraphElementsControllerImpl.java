@@ -292,6 +292,10 @@ public class GraphElementsControllerImpl implements GraphElementsController {
 
     public Node mergeNodes(Node[] nodes, Node selectedNode, AttributeRowsMergeStrategy[] mergeStrategies, boolean deleteMergedNodes) {
         AttributeTable nodesTable = Lookup.getDefault().lookup(AttributeController.class).getModel().getNodeTable();
+        if (selectedNode == null) {
+            selectedNode = nodes[0];//Use first node as selected node if null
+        }
+        
         //Create empty new node:
         Node newNode = createNode("");
 
@@ -518,8 +522,9 @@ public class GraphElementsControllerImpl implements GraphElementsController {
     }
 
     private Node buildNode(String label, String id) {
-        Node newNode = buildNode(label);
-        getGraph().setId(newNode, id);
+        Node newNode = Lookup.getDefault().lookup(GraphController.class).getModel().factory().newNode(id);
+        newNode.getNodeData().setSize(DEFAULT_NODE_SIZE);
+        newNode.getNodeData().setLabel(label);
         return newNode;
     }
 

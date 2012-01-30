@@ -44,40 +44,129 @@ package org.gephi.timeline.api;
 import org.gephi.dynamic.api.DynamicModel;
 
 /**
- *
- * @author Julian Bilcke <julian.bilcke@gmail.com>
+ * Timeline model which holds timeline bounds, interval and animation flags.
+ * <p>
+ * The timeline controls the currently selected time interval, accessible in the
+ * <code>DynamicAPI</code>. When enabled, it maintains the time scale and the position
+ * of the interval.
+ * <p>
+ * It also holds configuration values for animation such as speed and step size.
+ * 
+ * @author Julian Bilcke, Mathieu Bastian
  */
 public interface TimelineModel {
 
-    public void setup(DynamicModel dynamicModel);
+    /**
+     * Defines how the interval is moved when animating.
+     */
+    public enum PlayMode {
 
-    public void unsetup();
+        /**
+         * Only one bound of the interval is moved. The interval is therefore resized.
+         */
+        ONE_BOUND,
+        /**
+         * Both interval bounds are moved. The interval size remains unchanged.
+         */
+        TWO_BOUNDS
+    };
 
-    public void disable();
-
-    public double getTotalSize();
-
-    public double getMinValue();
-
-    public double getMaxValue();
-
-    public double getFromFloat();
-
-    public double getToFloat();
-
-    public void setCustomMin(double min);
-
-    public void setCustomMax(double max);
-
-    public void setRangeFromFloat(double from, double to);
-
-    public double getValueFromFloat(double position);
-
+    /**
+     * Returns <code>true</code> if the timeline is enabled. When enabled, the timeline
+     * is filtering the current graph.
+     * @return <code>true</code> if the timeline is enabled, <code>false</code>
+     * otherwise
+     */
     public boolean isEnabled();
 
-    public void setEnabled(boolean enabled);
+    /**
+     * Returns the min value of the time scale. This is the start of the earliest interval
+     * in the workspace.
+     * @return the min
+     */
+    public double getMin();
 
-    public void setUnit(Class cl);
+    /**
+     * Returns the max value of the time scale. This is the end of the latest interval
+     * in the workspace.
+     * @return the max
+     */
+    public double getMax();
 
-    public Class getUnit();
+    /**
+     * Returns the custom min value. This value can't be inferior than <code>min</code>
+     * @return the custom min
+     */
+    public double getCustomMin();
+
+    /**
+     * Returns the custom max value. This value can't be superior than <code>max</code>
+     * @return the custom max
+     */
+    public double getCustomMax();
+
+    /**
+     * Returns <code>true</code> if custom bounds are defined. Returns <code>false</code>
+     * when custom bounds are equal to <code>min</code> and <code>max</code>.
+     * @return <code>true</code> if custom bounds are defined, <code>false</code>
+     * otherwise.
+     */
+    public boolean hasCustomBounds();
+
+    /**
+     * Returns <code>true</code> if none of the min and max time values are infinity.
+     * @return <code>true</code> if the time scale is valid, <code>false</code>
+     * otherwise
+     */
+    public boolean hasValidBounds();
+
+    /**
+     * Returns the lower bound of the interval.
+     * @return the interval start
+     */
+    public double getIntervalStart();
+
+    /**
+     * Returns the upper bound of the interval.
+     * @return the interval end
+     */
+    public double getIntervalEnd();
+
+    /**
+     * Returns the current time format. Default is <code>DOUBLE</code>
+     * @return the current tie
+     */
+    public DynamicModel.TimeFormat getTimeFormat();
+
+    /**
+     * Returns the play delay in milliseconds. Defines the time between each interval
+     * shift.
+     * @return the play delay 
+     */
+    public int getPlayDelay();
+
+    /**
+     * Returns the play step. Defines how much the interval is moved at each step
+     * during animation. Defined in percentage of the total interval.
+     * @return the play step
+     */
+    public double getPlayStep();
+
+    /**
+     * Returns <code>true</code> if the timeline is playing.
+     * @return <code>true</code> is playing, <code>false</code> otherwise
+     */
+    public boolean isPlaying();
+
+    /**
+     * Returns the play mode. This defines how the interval is moved.
+     * @return the play mode
+     */
+    public PlayMode getPlayMode();
+
+    /**
+     * Returns the current timeline chart or <code>null</code> if node.
+     * @return the timeline chart or <code>null</code>
+     */
+    public TimelineChart getChart();
 }

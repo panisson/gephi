@@ -256,13 +256,19 @@ public class RichTooltip {
     }
     private Popup tipWindow;
     private boolean tipShowing = false;
-
+    
     public void showTooltip(JComponent component) {
         if (component == null || !component.isShowing()) {
             return;
         }
+        showTooltip(component, component.getLocationOnScreen());
+    }
+
+    public void showTooltip(JComponent component, Point screenLocation) {
+        if (component == null || !component.isShowing()) {
+            return;
+        }
         Dimension size;
-        Point screenLocation = component.getLocationOnScreen();
         Point location = new Point();
         GraphicsConfiguration gc;
         gc = component.getGraphicsConfiguration();
@@ -281,8 +287,8 @@ public class RichTooltip {
 
 
         // display directly below or above it
-        location.x = screenLocation.x;
-        location.y = screenLocation.y + component.getHeight();
+        location.x = screenLocation.x + 10;
+        location.y = screenLocation.y - 10;
         if ((location.y + size.height) > (sBounds.y + sBounds.height)) {
             location.y = screenLocation.y - size.height;
         }

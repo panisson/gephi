@@ -99,13 +99,13 @@ public class ArrowRenderer implements Renderer {
             float radius = properties.getFloatValue(PreviewProperty.EDGE_RADIUS);
 
             size *= weight;
-            radius = -(radius + (Float) targetItem.getData(NodeItem.SIZE) / 2f + properties.getFloatValue(PreviewProperty.NODE_BORDER_WIDTH));
+            radius = -(radius + (Float) targetItem.getData(NodeItem.SIZE) / 2f + Math.max(0, properties.getFloatValue(PreviewProperty.NODE_BORDER_WIDTH)));
 
             //Avoid arrow from passing the node's center:
             if (radius > 0) {
                 radius = 0;
             }
-            
+
             //3 points
             Float x1 = sourceItem.getData(NodeItem.X);
             Float x2 = targetItem.getData(NodeItem.X);
@@ -187,7 +187,7 @@ public class ArrowRenderer implements Renderer {
     }
 
     public boolean isRendererForitem(Item item, PreviewProperties properties) {
-        return item instanceof EdgeItem && properties.getBooleanValue(PreviewProperty.DIRECTED)
+        return item instanceof EdgeItem && properties.getBooleanValue(PreviewProperty.SHOW_EDGES) && properties.getBooleanValue(PreviewProperty.DIRECTED)
                 && (Boolean) item.getData(EdgeItem.DIRECTED) && !(Boolean) item.getData(EdgeItem.SELF_LOOP)
                 && !properties.getBooleanValue(PreviewProperty.MOVING);
     }
