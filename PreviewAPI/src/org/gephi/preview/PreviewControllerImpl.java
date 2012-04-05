@@ -1,61 +1,53 @@
 /*
-Copyright 2008-2011 Gephi
-Authors : Mathieu Bastian
-Website : http://www.gephi.org
+ Copyright 2008-2011 Gephi
+ Authors : Mathieu Bastian
+ Website : http://www.gephi.org
 
-This file is part of Gephi.
+ This file is part of Gephi.
 
-DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 
-Copyright 2011 Gephi Consortium. All rights reserved.
+ Copyright 2011 Gephi Consortium. All rights reserved.
 
-The contents of this file are subject to the terms of either the GNU
-General Public License Version 3 only ("GPL") or the Common
-Development and Distribution License("CDDL") (collectively, the
-"License"). You may not use this file except in compliance with the
-License. You can obtain a copy of the License at
-http://gephi.org/about/legal/license-notice/
-or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
-specific language governing permissions and limitations under the
-License.  When distributing the software, include this License Header
-Notice in each file and include the License files at
-/cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
-License Header, with the fields enclosed by brackets [] replaced by
-your own identifying information:
-"Portions Copyrighted [year] [name of copyright owner]"
+ The contents of this file are subject to the terms of either the GNU
+ General Public License Version 3 only ("GPL") or the Common
+ Development and Distribution License("CDDL") (collectively, the
+ "License"). You may not use this file except in compliance with the
+ License. You can obtain a copy of the License at
+ http://gephi.org/about/legal/license-notice/
+ or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
+ specific language governing permissions and limitations under the
+ License.  When distributing the software, include this License Header
+ Notice in each file and include the License files at
+ /cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
+ License Header, with the fields enclosed by brackets [] replaced by
+ your own identifying information:
+ "Portions Copyrighted [year] [name of copyright owner]"
 
-If you wish your version of this file to be governed by only the CDDL
-or only the GPL Version 3, indicate your decision by adding
-"[Contributor] elects to include this software in this distribution
-under the [CDDL or GPL Version 3] license." If you do not indicate a
-single choice of license, a recipient has the option to distribute
-your version of this file under either the CDDL, the GPL Version 3 or
-to extend the choice of license to its licensees as provided above.
-However, if you add GPL Version 3 code and therefore, elected the GPL
-Version 3 license, then the option applies only if the new code is
-made subject to such option by the copyright holder.
+ If you wish your version of this file to be governed by only the CDDL
+ or only the GPL Version 3, indicate your decision by adding
+ "[Contributor] elects to include this software in this distribution
+ under the [CDDL or GPL Version 3] license." If you do not indicate a
+ single choice of license, a recipient has the option to distribute
+ your version of this file under either the CDDL, the GPL Version 3 or
+ to extend the choice of license to its licensees as provided above.
+ However, if you add GPL Version 3 code and therefore, elected the GPL
+ Version 3 license, then the option applies only if the new code is
+ made subject to such option by the copyright holder.
 
-Contributor(s):
+ Contributor(s):
 
-Portions Copyrighted 2011 Gephi Consortium.
+ Portions Copyrighted 2011 Gephi Consortium.
  */
 package org.gephi.preview;
 
 import java.awt.Dimension;
 import java.awt.Point;
+import java.util.LinkedHashMap;
 import org.gephi.data.attributes.api.AttributeController;
 import org.gephi.data.attributes.api.AttributeModel;
-import org.gephi.graph.api.Graph;
-import org.gephi.graph.api.GraphController;
-import org.gephi.graph.api.GraphModel;
-import org.gephi.graph.api.GraphView;
-import org.gephi.graph.api.Node;
-import org.gephi.preview.api.Item;
-import org.gephi.preview.api.PreviewController;
-import org.gephi.preview.api.PreviewModel;
-import org.gephi.preview.api.PreviewProperties;
-import org.gephi.preview.api.PreviewProperty;
-import org.gephi.preview.api.RenderTarget;
+import org.gephi.graph.api.*;
+import org.gephi.preview.api.*;
 import org.gephi.preview.spi.ItemBuilder;
 import org.gephi.preview.spi.RenderTargetBuilder;
 import org.gephi.preview.spi.Renderer;
@@ -79,6 +71,9 @@ public class PreviewControllerImpl implements PreviewController {
     //Other controllers
     private final GraphController graphController;
     private final AttributeController attributeController;
+    //Registered renderers
+    private Renderer[] registeredRenderers = null;
+    private Boolean anyPluginRendererRegistered = null;
 
     public PreviewControllerImpl() {
         graphController = Lookup.getDefault().lookup(GraphController.class);
@@ -119,7 +114,7 @@ public class PreviewControllerImpl implements PreviewController {
         if (pc.getCurrentWorkspace() != null) {
             model = pc.getCurrentWorkspace().getLookup().lookup(PreviewModelImpl.class);
             if (model == null) {
-                model = new PreviewModelImpl(pc.getCurrentWorkspace());
+                model = new PreviewModelImpl(pc.getCurrentWorkspace(), this);
                 pc.getCurrentWorkspace().add(model);
             }
         }
@@ -155,15 +150,23 @@ public class PreviewControllerImpl implements PreviewController {
             }
         }
 
+        Renderer[] renderers = model.getManagedEnabledRenderers();
+        if (renderers == null) {
+            renderers = getRegisteredRenderers();
+        }
+
         //Build items
         for (ItemBuilder b : Lookup.getDefault().lookupAll(ItemBuilder.class)) {
-            try {
-                Item[] items = b.getItems(graph, attributeModel);
-                if (items != null) {
-                    previewModel.loadItems(b.getType(), items);
+            //Only build items of this builder if some renderer needs it:
+            if (isItemBuilderNeeded(b, previewModel.getProperties(), renderers)) {
+                try {
+                    Item[] items = b.getItems(graph, attributeModel);
+                    if (items != null) {
+                        previewModel.loadItems(b.getType(), items);
+                    }
+                } catch (Exception e) {
+                    Exceptions.printStackTrace(e);
                 }
-            } catch (Exception e) {
-                Exceptions.printStackTrace(e);
             }
         }
 
@@ -177,9 +180,19 @@ public class PreviewControllerImpl implements PreviewController {
 
 
         //Pre process renderers
-        for (Renderer r : Lookup.getDefault().lookupAll(Renderer.class).toArray(new Renderer[0])) {
+        for (Renderer r : renderers) {
             r.preProcess(model);
         }
+    }
+
+    private boolean isItemBuilderNeeded(ItemBuilder itemBuilder, PreviewProperties properties, Renderer[] renderers) {
+        for (Renderer r : renderers) {
+            if (r.needsItemBuilder(itemBuilder, properties)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void updateDimensions(PreviewModelImpl model, Item[] nodeItems) {
@@ -220,17 +233,31 @@ public class PreviewControllerImpl implements PreviewController {
 
     @Override
     public void render(RenderTarget target) {
-        render(target, getModel());
+        PreviewModelImpl m = getModel();
+        render(target, m.getManagedEnabledRenderers(), m);
     }
 
     @Override
     public void render(RenderTarget target, Workspace workspace) {
-        render(target, getModel(workspace));
+        PreviewModelImpl m = getModel(workspace);
+        render(target, m.getManagedEnabledRenderers(), m);
     }
 
-    private synchronized void render(RenderTarget target, PreviewModelImpl previewModel) {
+    @Override
+    public void render(RenderTarget target, Renderer[] renderers) {
+        render(target, renderers, getModel());
+    }
+
+    @Override
+    public void render(RenderTarget target, Renderer[] renderers, Workspace workspace) {
+        render(target, renderers, getModel(workspace));
+    }
+
+    private synchronized void render(RenderTarget target, Renderer[] renderers, PreviewModelImpl previewModel) {
         if (previewModel != null) {
-            Renderer[] renderers = Lookup.getDefault().lookupAll(Renderer.class).toArray(new Renderer[0]);
+            if (renderers == null) {
+                renderers = getRegisteredRenderers();
+            }
             PreviewProperties properties = previewModel.getProperties();
 
             //Progress
@@ -310,5 +337,40 @@ public class PreviewControllerImpl implements PreviewController {
             }
         }
         return null;
+    }
+
+    @Override
+    public Renderer[] getRegisteredRenderers() {
+        if (registeredRenderers == null) {
+            LinkedHashMap<String, Renderer> renderers = new LinkedHashMap<String, Renderer>();
+            for (Renderer r : Lookup.getDefault().lookupAll(Renderer.class)) {
+                renderers.put(r.getClass().getName(), r);
+            }
+
+            for (Renderer r : renderers.values().toArray(new Renderer[0])) {
+                Class superClass = r.getClass().getSuperclass();
+                if (superClass != null && superClass.getName().startsWith("org.gephi.preview.plugin.renderers.")) {
+                    //Replace default renderer with plugin by removing it
+                    renderers.remove(superClass.getName());
+                }
+            }
+
+            registeredRenderers = renderers.values().toArray(new Renderer[0]);
+        }
+        return registeredRenderers;
+    }
+
+    @Override
+    public boolean isAnyPluginRendererRegistered() {
+        if (anyPluginRendererRegistered == null) {
+            anyPluginRendererRegistered = false;
+            for (Renderer renderer : getRegisteredRenderers()) {
+                if (!renderer.getClass().getName().startsWith("org.gephi.preview.plugin.renderers.")) {
+                    anyPluginRendererRegistered = true;
+                    break;
+                }
+            }
+        }
+        return anyPluginRendererRegistered;
     }
 }

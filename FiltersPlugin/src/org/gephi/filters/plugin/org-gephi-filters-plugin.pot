@@ -20,3 +20,9 @@ msgstr "Filters implementations, define new filters"
 
 msgid "OpenIDE-Module-Short-Description"
 msgstr "Filters implementations"
+
+msgid "AbstractAttributeFilterBuilder.Node"
+msgstr "Node"
+
+msgid "AbstractAttributeFilterBuilder.Edge"
+msgstr "Edge"

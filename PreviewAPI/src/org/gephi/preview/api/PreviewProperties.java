@@ -43,10 +43,13 @@ package org.gephi.preview.api;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.beans.PropertyEditor;
+import java.beans.PropertyEditorManager;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -80,7 +83,7 @@ public class PreviewProperties {
     private final Map<String, PreviewProperty> properties;
 
     public PreviewProperties() {
-        properties = new HashMap<String, PreviewProperty>();
+        properties = new LinkedHashMap<String, PreviewProperty>();//Use LinkedHashMap to retrieve properties in insertion order
         simpleValues = new HashMap<String, Object>();
     }
 
@@ -279,6 +282,7 @@ public class PreviewProperties {
      */
     public PreviewProperty[] getProperties() {
         PreviewProperty[] props = properties.values().toArray(new PreviewProperty[0]);
+        //Reorder to put parents on top:
         Arrays.sort(props, new Comparator<PreviewProperty>() {
 
             @Override
@@ -290,7 +294,7 @@ public class PreviewProperties {
                 } else if (!hasParent1 && hasParent2) {
                     return -1;
                 } else {
-                    return o1.displayName.compareTo(o2.displayName);
+                    return 0;//Stable sort will not change original insertion order if no parents.
                 }
             }
         });
@@ -384,6 +388,53 @@ public class PreviewProperties {
                 prop.setValue(entry.getValue());
             } else {
                 simpleValues.put(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+    
+    /**
+     * Converts any value to a serialized String.
+     * Uses <code>PropertyEditor</code> for serialization except for values of <code>Font</code> class.
+     * @param value Value to serialize as String
+     * @return Result String or null if the value can't be serialized with a <code>PropertyEditor</code>
+     */
+    public static String getValueAsText(Object value) {
+        if (value.getClass().equals(Font.class)) {
+            Font f = (Font) value;
+            return String.format("%s-%d-%d", f.getName(), f.getStyle(), f.getSize()); //bug 551877
+        } else {
+            PropertyEditor editor = PropertyEditorManager.findEditor(value.getClass());
+            if (editor != null) {
+                editor.setValue(value);
+                return editor.getAsText();
+            } else {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Deserializes a serialized String of the given class.
+     * Uses <code>PropertyEditor</code> for serialization except for values of <code>Font</code> class.
+     * @param valueStr String to deserialize
+     * @param valueClass Class of the serialized value
+     * @return Deserialized value or null if it can't be deserialized with a <code>PropertyEditor</code>
+     */
+    public static Object readValueFromText(String valueStr, Class valueClass) {
+        if (valueClass.equals(Font.class)) {
+            try {
+                String parts[] = valueStr.split("-");
+                return new Font(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));//bug 551877
+            } catch (Exception e) {
+                return null;
+            }
+        } else {
+            PropertyEditor editor = PropertyEditorManager.findEditor(valueClass);
+            if (editor != null) {
+                editor.setAsText(valueStr);
+                return editor.getValue();
+            } else {
+                return null;
             }
         }
     }

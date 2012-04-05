@@ -1,43 +1,43 @@
 /*
-Copyright 2008-2010 Gephi
-Authors : Mathieu Bastian <mathieu.bastian@gephi.org>, Mathieu Jacomy, Julian Bilcke, Eduardo Ramos
-Website : http://www.gephi.org
+ Copyright 2008-2010 Gephi
+ Authors : Mathieu Bastian <mathieu.bastian@gephi.org>, Mathieu Jacomy, Julian Bilcke, Eduardo Ramos
+ Website : http://www.gephi.org
 
-This file is part of Gephi.
+ This file is part of Gephi.
 
-DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 
-Copyright 2011 Gephi Consortium. All rights reserved.
+ Copyright 2011 Gephi Consortium. All rights reserved.
 
-The contents of this file are subject to the terms of either the GNU
-General Public License Version 3 only ("GPL") or the Common
-Development and Distribution License("CDDL") (collectively, the
-"License"). You may not use this file except in compliance with the
-License. You can obtain a copy of the License at
-http://gephi.org/about/legal/license-notice/
-or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
-specific language governing permissions and limitations under the
-License.  When distributing the software, include this License Header
-Notice in each file and include the License files at
-/cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
-License Header, with the fields enclosed by brackets [] replaced by
-your own identifying information:
-"Portions Copyrighted [year] [name of copyright owner]"
+ The contents of this file are subject to the terms of either the GNU
+ General Public License Version 3 only ("GPL") or the Common
+ Development and Distribution License("CDDL") (collectively, the
+ "License"). You may not use this file except in compliance with the
+ License. You can obtain a copy of the License at
+ http://gephi.org/about/legal/license-notice/
+ or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
+ specific language governing permissions and limitations under the
+ License.  When distributing the software, include this License Header
+ Notice in each file and include the License files at
+ /cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
+ License Header, with the fields enclosed by brackets [] replaced by
+ your own identifying information:
+ "Portions Copyrighted [year] [name of copyright owner]"
 
-If you wish your version of this file to be governed by only the CDDL
-or only the GPL Version 3, indicate your decision by adding
-"[Contributor] elects to include this software in this distribution
-under the [CDDL or GPL Version 3] license." If you do not indicate a
-single choice of license, a recipient has the option to distribute
-your version of this file under either the CDDL, the GPL Version 3 or
-to extend the choice of license to its licensees as provided above.
-However, if you add GPL Version 3 code and therefore, elected the GPL
-Version 3 license, then the option applies only if the new code is
-made subject to such option by the copyright holder.
+ If you wish your version of this file to be governed by only the CDDL
+ or only the GPL Version 3, indicate your decision by adding
+ "[Contributor] elects to include this software in this distribution
+ under the [CDDL or GPL Version 3] license." If you do not indicate a
+ single choice of license, a recipient has the option to distribute
+ your version of this file under either the CDDL, the GPL Version 3 or
+ to extend the choice of license to its licensees as provided above.
+ However, if you add GPL Version 3 code and therefore, elected the GPL
+ Version 3 license, then the option applies only if the new code is
+ made subject to such option by the copyright holder.
 
-Contributor(s):
+ Contributor(s):
 
-Portions Copyrighted 2011 Gephi Consortium.
+ Portions Copyrighted 2011 Gephi Consortium.
  */
 package org.gephi.desktop.datalab;
 
@@ -50,33 +50,16 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
-import javax.swing.BorderFactory;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JTable;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import org.gephi.data.attributes.api.AttributeColumn;
-import org.gephi.data.attributes.api.AttributeController;
-import org.gephi.data.attributes.api.AttributeEvent;
 import org.gephi.data.attributes.api.AttributeEvent.EventType;
-import org.gephi.data.attributes.api.AttributeListener;
-import org.gephi.data.attributes.api.AttributeModel;
-import org.gephi.data.attributes.api.AttributeTable;
+import org.gephi.data.attributes.api.*;
 import org.gephi.datalab.api.DataLaboratoryHelper;
 import org.gephi.datalab.api.datatables.DataTablesController;
 import org.gephi.datalab.api.datatables.DataTablesEventListener;
@@ -86,43 +69,25 @@ import org.gephi.datalab.spi.edges.EdgesManipulator;
 import org.gephi.datalab.spi.general.GeneralActionsManipulator;
 import org.gephi.datalab.spi.general.PluginGeneralActionsManipulator;
 import org.gephi.datalab.spi.nodes.NodesManipulator;
-import org.gephi.graph.api.Edge;
-import org.gephi.graph.api.GraphController;
-import org.gephi.graph.api.GraphEvent;
-import org.gephi.graph.api.GraphListener;
-import org.gephi.graph.api.GraphModel;
-import org.gephi.graph.api.HierarchicalGraph;
-import org.gephi.graph.api.Node;
-import org.gephi.project.api.ProjectController;
-import org.gephi.ui.utils.BusyUtils;
-import org.gephi.project.api.Workspace;
-import org.gephi.project.api.WorkspaceListener;
-import org.gephi.ui.components.WrapLayout;
 import org.gephi.desktop.datalab.general.actions.AddColumnUI;
 import org.gephi.desktop.datalab.general.actions.CSVExportUI;
 import org.gephi.desktop.datalab.general.actions.MergeColumnsUI;
-import org.gephi.project.api.ProjectInformation;
-import org.gephi.project.api.WorkspaceInformation;
-import org.gephi.project.api.WorkspaceProvider;
+import org.gephi.graph.api.*;
+import org.gephi.project.api.*;
+import org.gephi.ui.components.WrapLayout;
+import org.gephi.ui.utils.BusyUtils;
 import org.gephi.ui.utils.DialogFileFilter;
 import org.gephi.ui.utils.UIUtils;
 import org.gephi.utils.TableCSVExporter;
+import org.netbeans.api.settings.ConvertAsProperties;
 import org.netbeans.swing.etable.ETableColumnModel;
 import org.openide.DialogDescriptor;
 import org.openide.DialogDisplayer;
-import org.openide.util.Exceptions;
-import org.openide.util.ImageUtilities;
-import org.openide.util.Lookup;
-import org.openide.util.NbBundle;
-import org.openide.util.NbPreferences;
+import org.openide.awt.ActionID;
+import org.openide.awt.ActionReference;
+import org.openide.util.*;
 import org.openide.windows.TopComponent;
-import org.openide.windows.WindowManager;
-import org.pushingpixels.flamingo.api.common.CommandButtonDisplayState;
-import org.pushingpixels.flamingo.api.common.JCommandButton;
-import org.pushingpixels.flamingo.api.common.JCommandButtonPanel;
-import org.pushingpixels.flamingo.api.common.JCommandButtonStrip;
-import org.pushingpixels.flamingo.api.common.JCommandMenuButton;
-import org.pushingpixels.flamingo.api.common.RichTooltip;
+import org.pushingpixels.flamingo.api.common.*;
 import org.pushingpixels.flamingo.api.common.icon.ImageWrapperResizableIcon;
 import org.pushingpixels.flamingo.api.common.popup.JCommandPopupMenu;
 import org.pushingpixels.flamingo.api.common.popup.JPopupPanel;
@@ -132,15 +97,22 @@ import org.pushingpixels.flamingo.api.common.popup.PopupPanelCallback;
  *
  * @author Mathieu Bastian
  */
-final class DataTableTopComponent extends TopComponent implements AWTEventListener, DataTablesEventListener, AttributeListener, GraphListener {
+@ConvertAsProperties(dtd = "-//org.gephi.desktop.datalab//DataTable//EN",
+autostore = false)
+@TopComponent.Description(preferredID = "DataTableTopComponent",
+iconBase = "org/gephi/desktop/datalab/resources/small.png",
+persistenceType = TopComponent.PERSISTENCE_ALWAYS)
+@TopComponent.Registration(mode = "editor", openAtStartup = true, roles = {"datalab"})
+@ActionID(category = "Window", id = "org.gephi.desktop.datalab.DataTableTopComponent")
+@ActionReference(path = "Menu/Window", position = 300)
+@TopComponent.OpenActionRegistration(displayName = "#CTL_DataTableTopComponent",
+preferredID = "DataTableTopComponent")
+public class DataTableTopComponent extends TopComponent implements AWTEventListener, DataTablesEventListener, AttributeListener, GraphListener {
 
     private enum ClassDisplayed {
 
         NONE, NODE, EDGE
     };
-    private static DataTableTopComponent instance;
-    static final String ICON_PATH = "org/gephi/desktop/datalab/resources/small.png";
-    private static final String PREFERRED_ID = "DataTableTopComponent";
     //Settings
     private static final String DATA_LABORATORY_DYNAMIC_FILTERING = "DataLaboratory_Dynamic_Filtering";
     private static final String DATA_LABORATORY_ONLY_VISIBLE = "DataLaboratory_visibleOnly";
@@ -174,7 +146,7 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
     //Executor
     private RefreshOnceHelperThread refreshOnceHelperThread;
 
-    private DataTableTopComponent() {
+    public DataTableTopComponent() {
 
         //Get saved preferences if existing:
         dynamicFiltering = NbPreferences.forModule(DataTableTopComponent.class).getBoolean(DATA_LABORATORY_DYNAMIC_FILTERING, true);
@@ -190,7 +162,6 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
 
         columnManipulatorsPanel.setLayout(new WrapLayout(WrapLayout.CENTER, 25, 20));
         setName(NbBundle.getMessage(DataTableTopComponent.class, "CTL_DataTableTopComponent"));
-        setIcon(ImageUtilities.loadImage(ICON_PATH));
 
         //toolbar
         Border b = (Border) UIManager.get("Nb.Editor.Toolbar.border"); //NOI18N
@@ -373,8 +344,10 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
     private AvailableColumnsModel getTableAvailableColumnsModel(AttributeTable table) {
         if (Lookup.getDefault().lookup(AttributeController.class).getModel().getNodeTable() == table) {
             return nodeAvailableColumnsModel;
-        } else {
+        } else if (Lookup.getDefault().lookup(AttributeController.class).getModel().getEdgeTable() == table) {
             return edgeAvailableColumnsModel;
+        } else {
+            return null;//Graph table or other table, not supported in data laboratory for now.
         }
     }
 
@@ -382,21 +355,30 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
         SwingUtilities.invokeLater(new Runnable() {
 
             public void run() {
-                AvailableColumnsModel tableAvailableColumnsModel = getTableAvailableColumnsModel(event.getSource());
-                switch (event.getEventType()) {
-                    case ADD_COLUMN:
-                        for (AttributeColumn c : event.getData().getAddedColumns()) {
-                            if (!tableAvailableColumnsModel.addAvailableColumn(c)) {//Add as available by default. Will only be added if the max number of available columns is not surpassed
-                                availableColumnsButton.setIcon(ImageUtilities.loadImageIcon("org/gephi/desktop/datalab/resources/light-bulb--plus.png", true));
-                                break;
+                AttributeTable table = event.getSource();
+                AvailableColumnsModel tableAvailableColumnsModel = getTableAvailableColumnsModel(table);
+                if (tableAvailableColumnsModel != null) {
+                    switch (event.getEventType()) {
+                        case ADD_COLUMN:
+                            for (AttributeColumn c : event.getData().getAddedColumns()) {
+                                if (!tableAvailableColumnsModel.addAvailableColumn(c)) {//Add as available by default. Will only be added if the max number of available columns is not surpassed
+                                    availableColumnsButton.setIcon(ImageUtilities.loadImageIcon("org/gephi/desktop/datalab/resources/light-bulb--plus.png", true));
+                                    break;
+                                }
                             }
-                        }
-                        break;
-                    case REMOVE_COLUMN:
-                        for (AttributeColumn c : event.getData().getAddedColumns()) {
-                            tableAvailableColumnsModel.removeAvailableColumn(c);
-                        }
-                        break;
+                            break;
+                        case REMOVE_COLUMN:
+                            for (AttributeColumn c : event.getData().getAddedColumns()) {
+                                tableAvailableColumnsModel.removeAvailableColumn(c);
+                            }
+                            break;
+                        case REPLACE_COLUMN:
+                            for (AttributeColumn c : event.getData().getRemovedColumns()) {
+                                tableAvailableColumnsModel.removeAvailableColumn(c);
+                                tableAvailableColumnsModel.addAvailableColumn(table.getColumn(c.getId()));
+                            }
+                            break;
+                    }
                 }
                 if (isOpened()) {
                     refreshOnce(event.is(EventType.SET_VALUE));
@@ -417,9 +399,11 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
     }
 
     /**
-     * This method ensures that the refreshing of all Data laboratory or table only happens once in a short time period.
+     * This method ensures that the refreshing of all Data laboratory or table
+     * only happens once in a short time period.
      *
-     * @param refreshTableOnly True to refresh only table values, false to refresh all UI including manipulators
+     * @param refreshTableOnly True to refresh only table values, false to
+     * refresh all UI including manipulators
      */
     private void refreshOnce(boolean refreshTableOnly) {
         if (refreshOnceHelperThread == null || !refreshOnceHelperThread.isAlive() || (refreshOnceHelperThread.refreshTableOnly && !refreshTableOnly)) {
@@ -434,7 +418,9 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
         refreshOnce(false);
     }
 
-    /****************Table related methods:*****************/
+    /**
+     * **************Table related methods:****************
+     */
     private void refreshFilter() {
         int index = columnComboBox.getSelectedIndex();
         if (index < 0) {
@@ -801,7 +787,9 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
         csvUI.unSetup();
     }
 
-    /*************Column manipulators related methods:*************/
+    /**
+     * ***********Column manipulators related methods:************
+     */
     private void refreshColumnManipulators() {
         SwingUtilities.invokeLater(new Runnable() {
 
@@ -856,7 +844,9 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
     }
 
     /**
-     * Creates a JCommandButton for the specified columns of a table and AttributeColumnsManipulator
+     * Creates a JCommandButton for the specified columns of a table and
+     * AttributeColumnsManipulator
+     *
      * @param table table
      * @param columns Columns
      * @param acm AttributeColumnsManipulator
@@ -991,7 +981,9 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
         }
     }
 
-    /**************General actions manipulators related methods:***************/
+    /**
+     * ************General actions manipulators related methods:**************
+     */
     private void refreshGeneralActionsButtons() {
         SwingUtilities.invokeLater(new Runnable() {
 
@@ -1063,7 +1055,7 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
                         lastManipulatorType = m.getType();
                         pluginsPanel.addButtonToLastGroup(preparePluginGeneralActionsButton(m));
                     }
-                    JCommandPopupMenu popup = new JCommandPopupMenu(pluginsPanel,4,20);
+                    JCommandPopupMenu popup = new JCommandPopupMenu(pluginsPanel, 4, 20);
                     return popup;
                 }
             });
@@ -1075,6 +1067,7 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
 
     /**
      * Prepare a button for the popup panel for plugin general actions.
+     *
      * @param m PluginGeneralActionsManipulator for the button
      * @return JCommandButton for the manipulator
      */
@@ -1099,8 +1092,9 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
     }
 
     /**
-     * This thread is used for processing graphChanged and attributesChanged events.
-     * It takes care to only refresh the UI once (the last one) when a lot of events come in a short period of time.
+     * This thread is used for processing graphChanged and attributesChanged
+     * events. It takes care to only refresh the UI once (the last one) when a
+     * lot of events come in a short period of time.
      */
     class RefreshOnceHelperThread extends Thread {
 
@@ -1141,6 +1135,7 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
     /**
      * To react to Ctrl+F keys combination calling Search/Replace general action
      * (and nodes/edges context menu mappings)
+     *
      * @param event
      */
     public void eventDispatched(AWTEvent event) {
@@ -1184,10 +1179,10 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
         }
     }
 
-    /** This method is called from within the constructor to
-     * initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is
-     * always regenerated by the Form Editor.
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
      */
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -1411,42 +1406,6 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
     private javax.swing.JScrollPane tableScrollPane;
     // End of variables declaration//GEN-END:variables
 
-    /**
-     * Gets default instance. Do not use directly: reserved for *.settings files only,
-     * i.e. deserialization routines; otherwise you could get a non-deserialized instance.
-     * To obtain the singleton instance, use {@link #findInstance}.
-     */
-    public static synchronized DataTableTopComponent getDefault() {
-        if (instance == null) {
-            instance = new DataTableTopComponent();
-        }
-        return instance;
-    }
-
-    /**
-     * Obtain the DataTableTopComponent instance. Never call {@link #getDefault} directly!
-     */
-    public static synchronized DataTableTopComponent findInstance() {
-        TopComponent win = WindowManager.getDefault().findTopComponent(PREFERRED_ID);
-        if (win == null) {
-            Logger.getLogger(DataTableTopComponent.class.getName()).warning(
-                    "Cannot find " + PREFERRED_ID + " component. It will not be located properly in the window system.");
-            return getDefault();
-        }
-        if (win instanceof DataTableTopComponent) {
-            return (DataTableTopComponent) win;
-        }
-        Logger.getLogger(DataTableTopComponent.class.getName()).warning(
-                "There seem to be multiple components with the '" + PREFERRED_ID
-                + "' ID. That is a potential source of errors and unexpected behavior.");
-        return getDefault();
-    }
-
-    @Override
-    public int getPersistenceType() {
-        return TopComponent.PERSISTENCE_ALWAYS;
-    }
-
     @Override
     public void componentOpened() {
         refreshAllOnce();
@@ -1468,33 +1427,29 @@ final class DataTableTopComponent extends TopComponent implements AWTEventListen
         java.awt.Toolkit.getDefaultToolkit().removeAWTEventListener(this);
     }
 
-    /** replaces this in object stream */
-    @Override
-    public Object writeReplace() {
-        return new ResolvableHelper();
+    void writeProperties(java.util.Properties p) {
+        // better to version settings since initial version as advocated at
+        // http://wiki.apidesign.org/wiki/PropertyFiles
+        p.setProperty("version", "1.0");
+        // TODO store your settings
     }
 
-    @Override
-    protected String preferredID() {
-        return PREFERRED_ID;
-    }
-
-    final static class ResolvableHelper implements Serializable {
-
-        private static final long serialVersionUID = 1L;
-
-        public Object readResolve() {
-            return DataTableTopComponent.getDefault();
-        }
+    void readProperties(java.util.Properties p) {
+        String version = p.getProperty("version");
+        // TODO read your settings according to their version
     }
 
     /**
-     * <p>Exports a JTable to a CSV file showing first a dialog to select the file to write.</p>
+     * <p>Exports a JTable to a CSV file showing first a dialog to select the
+     * file to write.</p>
+     *
      * @param parent Parent window
      * @param table Table to export
-     * @param separator Separator to use for separating values of a row in the CSV file. If null ',' will be used.
+     * @param separator Separator to use for separating values of a row in the
+     * CSV file. If null ',' will be used.
      * @param charset Charset encoding for the file
-     * @param columnsToExport Indicates the indexes of the columns to export. All columns will be exported if null
+     * @param columnsToExport Indicates the indexes of the columns to export.
+     * All columns will be exported if null
      */
     public static void exportTableAsCSV(JComponent parent, JTable table, Character separator, Charset charset, Integer[] columnsToExport, String fileName) {
         String lastPath = NbPreferences.forModule(TableCSVExporter.class).get(LAST_PATH, null);

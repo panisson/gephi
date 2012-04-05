@@ -1,43 +1,43 @@
 /*
-Copyright 2008-2011 Gephi
-Authors : Mathieu Bastian
-Website : http://www.gephi.org
+ Copyright 2008-2011 Gephi
+ Authors : Mathieu Bastian
+ Website : http://www.gephi.org
 
-This file is part of Gephi.
+ This file is part of Gephi.
 
-DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 
-Copyright 2011 Gephi Consortium. All rights reserved.
+ Copyright 2011 Gephi Consortium. All rights reserved.
 
-The contents of this file are subject to the terms of either the GNU
-General Public License Version 3 only ("GPL") or the Common
-Development and Distribution License("CDDL") (collectively, the
-"License"). You may not use this file except in compliance with the
-License. You can obtain a copy of the License at
-http://gephi.org/about/legal/license-notice/
-or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
-specific language governing permissions and limitations under the
-License.  When distributing the software, include this License Header
-Notice in each file and include the License files at
-/cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
-License Header, with the fields enclosed by brackets [] replaced by
-your own identifying information:
-"Portions Copyrighted [year] [name of copyright owner]"
+ The contents of this file are subject to the terms of either the GNU
+ General Public License Version 3 only ("GPL") or the Common
+ Development and Distribution License("CDDL") (collectively, the
+ "License"). You may not use this file except in compliance with the
+ License. You can obtain a copy of the License at
+ http://gephi.org/about/legal/license-notice/
+ or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
+ specific language governing permissions and limitations under the
+ License.  When distributing the software, include this License Header
+ Notice in each file and include the License files at
+ /cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
+ License Header, with the fields enclosed by brackets [] replaced by
+ your own identifying information:
+ "Portions Copyrighted [year] [name of copyright owner]"
 
-If you wish your version of this file to be governed by only the CDDL
-or only the GPL Version 3, indicate your decision by adding
-"[Contributor] elects to include this software in this distribution
-under the [CDDL or GPL Version 3] license." If you do not indicate a
-single choice of license, a recipient has the option to distribute
-your version of this file under either the CDDL, the GPL Version 3 or
-to extend the choice of license to its licensees as provided above.
-However, if you add GPL Version 3 code and therefore, elected the GPL
-Version 3 license, then the option applies only if the new code is
-made subject to such option by the copyright holder.
+ If you wish your version of this file to be governed by only the CDDL
+ or only the GPL Version 3, indicate your decision by adding
+ "[Contributor] elects to include this software in this distribution
+ under the [CDDL or GPL Version 3] license." If you do not indicate a
+ single choice of license, a recipient has the option to distribute
+ your version of this file under either the CDDL, the GPL Version 3 or
+ to extend the choice of license to its licensees as provided above.
+ However, if you add GPL Version 3 code and therefore, elected the GPL
+ Version 3 license, then the option applies only if the new code is
+ made subject to such option by the copyright holder.
 
-Contributor(s):
+ Contributor(s):
 
-Portions Copyrighted 2011 Gephi Consortium.
+ Portions Copyrighted 2011 Gephi Consortium.
  */
 package org.gephi.timeline;
 
@@ -175,8 +175,11 @@ public class TimelineControllerImpl implements TimelineController, DynamicModelL
 
     private boolean setMinMax(double min, double max) {
         if (model != null) {
-            if (min >= max) {
+            if (min > max) {
                 throw new IllegalArgumentException("min should be less than max");
+            } else if(min == max) {
+                //Avoid setting values at this point
+                return false;
             }
             double previousBoundsMin = model.getCustomMin();
             double previousBoundsMax = model.getCustomMax();
@@ -192,15 +195,18 @@ public class TimelineControllerImpl implements TimelineController, DynamicModelL
             } else if (model.getCustomMax() > max) {
                 model.setCustomMax(max);
             }
-            
+
             model.setPreviousMin(min);
             model.setPreviousMax(max);
 
-            fireTimelineModelEvent(new TimelineModelEvent(TimelineModelEvent.EventType.MIN_MAX, model, new double[]{min, max}));
+            if (model.hasValidBounds()) {
+                fireTimelineModelEvent(new TimelineModelEvent(TimelineModelEvent.EventType.MIN_MAX, model, new double[]{min, max}));
 
-            if (model.getCustomMax() != max || model.getCustomMin() != min) {
-                fireTimelineModelEvent(new TimelineModelEvent(TimelineModelEvent.EventType.CUSTOM_BOUNDS, model, new double[]{min, max}));
+                if (model.getCustomMax() != max || model.getCustomMin() != min) {
+                    fireTimelineModelEvent(new TimelineModelEvent(TimelineModelEvent.EventType.CUSTOM_BOUNDS, model, new double[]{min, max}));
+                }
             }
+
             if ((Double.isInfinite(previousBoundsMax) || Double.isInfinite(previousBoundsMin)) && model.hasValidBounds()) {
                 fireTimelineModelEvent(new TimelineModelEvent(TimelineModelEvent.EventType.VALID_BOUNDS, model, true));
             } else if (!Double.isInfinite(previousBoundsMax) && !Double.isInfinite(previousBoundsMin) && !model.hasValidBounds()) {
@@ -245,6 +251,10 @@ public class TimelineControllerImpl implements TimelineController, DynamicModelL
                 model.setEnabled(enabled);
                 fireTimelineModelEvent(new TimelineModelEvent(TimelineModelEvent.EventType.ENABLED, model, enabled));
             }
+            if (!enabled) {
+                //Disable filtering
+                dynamicController.setVisibleInterval(new TimeInterval());
+            }
         }
     }
 
@@ -283,7 +293,7 @@ public class TimelineControllerImpl implements TimelineController, DynamicModelL
         if (model != null) {
             if (!(model.getChart() == null && column == null)
                     || (model.getChart() != null && !model.getChart().getColumn().equals(column))) {
-                if (!attributeModel.getGraphTable().hasColumn(column.getId())) {
+                if (column != null && !attributeModel.getGraphTable().hasColumn(column.getId())) {
                     throw new IllegalArgumentException("Not a graph column");
                 }
                 Thread thread = new Thread(new Runnable() {
@@ -291,18 +301,21 @@ public class TimelineControllerImpl implements TimelineController, DynamicModelL
                     @Override
                     public void run() {
                         TimelineChart chart = null;
-                        Graph graph = Lookup.getDefault().lookup(GraphController.class).getModel().getGraph();
+                        Graph graph = Lookup.getDefault().lookup(GraphController.class).getModel().getGraphVisible();
                         if (column != null) {
                             DynamicType type = (DynamicType) graph.getAttributes().getValue(column.getIndex());
                             if (type != null) {
                                 List<Interval> intervals = type.getIntervals(model.getCustomMin(), model.getCustomMax());
-                                Number[] xs = new Number[intervals.size()];
-                                Number[] ys = new Number[intervals.size()];
+                                Number[] xs = new Number[intervals.size() * 2];
+                                Number[] ys = new Number[intervals.size() * 2];
                                 int i = 0;
                                 for (Interval interval : intervals) {
                                     Number x = (Double) interval.getLow();
                                     Number y = (Number) interval.getValue();
                                     xs[i] = x;
+                                    ys[i] = y;
+                                    i++;
+                                    xs[i] = (Double) interval.getHigh();
                                     ys[i] = y;
                                     i++;
                                 }

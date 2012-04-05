@@ -1,46 +1,47 @@
 /*
-Copyright 2008-2010 Gephi
-Authors : Mathieu Bastian <mathieu.bastian@gephi.org>
-Website : http://www.gephi.org
+ Copyright 2008-2010 Gephi
+ Authors : Mathieu Bastian <mathieu.bastian@gephi.org>
+ Website : http://www.gephi.org
 
-This file is part of Gephi.
+ This file is part of Gephi.
 
-DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 
-Copyright 2011 Gephi Consortium. All rights reserved.
+ Copyright 2011 Gephi Consortium. All rights reserved.
 
-The contents of this file are subject to the terms of either the GNU
-General Public License Version 3 only ("GPL") or the Common
-Development and Distribution License("CDDL") (collectively, the
-"License"). You may not use this file except in compliance with the
-License. You can obtain a copy of the License at
-http://gephi.org/about/legal/license-notice/
-or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
-specific language governing permissions and limitations under the
-License.  When distributing the software, include this License Header
-Notice in each file and include the License files at
-/cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
-License Header, with the fields enclosed by brackets [] replaced by
-your own identifying information:
-"Portions Copyrighted [year] [name of copyright owner]"
+ The contents of this file are subject to the terms of either the GNU
+ General Public License Version 3 only ("GPL") or the Common
+ Development and Distribution License("CDDL") (collectively, the
+ "License"). You may not use this file except in compliance with the
+ License. You can obtain a copy of the License at
+ http://gephi.org/about/legal/license-notice/
+ or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
+ specific language governing permissions and limitations under the
+ License.  When distributing the software, include this License Header
+ Notice in each file and include the License files at
+ /cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
+ License Header, with the fields enclosed by brackets [] replaced by
+ your own identifying information:
+ "Portions Copyrighted [year] [name of copyright owner]"
 
-If you wish your version of this file to be governed by only the CDDL
-or only the GPL Version 3, indicate your decision by adding
-"[Contributor] elects to include this software in this distribution
-under the [CDDL or GPL Version 3] license." If you do not indicate a
-single choice of license, a recipient has the option to distribute
-your version of this file under either the CDDL, the GPL Version 3 or
-to extend the choice of license to its licensees as provided above.
-However, if you add GPL Version 3 code and therefore, elected the GPL
-Version 3 license, then the option applies only if the new code is
-made subject to such option by the copyright holder.
+ If you wish your version of this file to be governed by only the CDDL
+ or only the GPL Version 3, indicate your decision by adding
+ "[Contributor] elects to include this software in this distribution
+ under the [CDDL or GPL Version 3] license." If you do not indicate a
+ single choice of license, a recipient has the option to distribute
+ your version of this file under either the CDDL, the GPL Version 3 or
+ to extend the choice of license to its licensees as provided above.
+ However, if you add GPL Version 3 code and therefore, elected the GPL
+ Version 3 license, then the option applies only if the new code is
+ made subject to such option by the copyright holder.
 
-Contributor(s):
+ Contributor(s):
 
-Portions Copyrighted 2011 Gephi Consortium.
-*/
+ Portions Copyrighted 2011 Gephi Consortium.
+ */
 package org.gephi.desktop.welcome;
 
+import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -48,48 +49,43 @@ import java.awt.event.ItemListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
+import javax.swing.JDialog;
+import javax.swing.JPanel;
 import org.gephi.desktop.importer.api.ImportControllerUI;
 import org.gephi.desktop.mrufiles.api.MostRecentFiles;
 import org.gephi.desktop.project.api.ProjectControllerUI;
 import org.jdesktop.swingx.JXHyperlink;
-import org.openide.util.Exceptions;
-import org.openide.util.NbBundle;
-import org.openide.windows.TopComponent;
-import org.openide.windows.WindowManager;
-//import org.openide.util.ImageUtilities;
-import org.netbeans.api.settings.ConvertAsProperties;
 import org.openide.DialogDisplayer;
 import org.openide.NotifyDescriptor;
 import org.openide.filesystems.FileObject;
 import org.openide.filesystems.FileUtil;
-import org.openide.util.ImageUtilities;
-import org.openide.util.Lookup;
-import org.openide.util.NbPreferences;
+import org.openide.util.*;
+import org.openide.windows.TopComponent;
 
 /**
  * Top component which displays something.
  */
-@ConvertAsProperties(dtd = "-//org.gephi.desktop.welcome//Welcome//EN",
-autostore = false)
-public final class WelcomeTopComponent extends TopComponent {
+public final class WelcomeTopComponent extends JPanel {
 
+    private static WelcomeTopComponent instance;
     public static final String STARTUP_PREF = "WelcomeScreen_Open_Startup";
     private static final String GEPHI_EXTENSION = "gephi";
     private static final Object LINK_PATH = new Object();
-    private static WelcomeTopComponent instance;
-    /** path to the icon used by the component and its open action */
-//    static final String ICON_PATH = "SET/PATH/TO/ICON/HERE";
-    private static final String PREFERRED_ID = "WelcomeTopComponent";
     private Action openAction;
 
-    public WelcomeTopComponent() {
+    public static synchronized WelcomeTopComponent getInstance() {
+        if (instance == null) {
+            instance = new WelcomeTopComponent();
+        }
+        return instance;
+    }
+
+    private WelcomeTopComponent() {
         initComponents();
         setName(NbBundle.getMessage(WelcomeTopComponent.class, "CTL_WelcomeTopComponent"));
-//        setToolTipText(NbBundle.getMessage(WelcomeTopComponent.class, "HINT_WelcomeTopComponent"));
-//        setIcon(ImageUtilities.loadImage(ICON_PATH, true));
+
         putClientProperty(TopComponent.PROP_DRAGGING_DISABLED, Boolean.TRUE);
         putClientProperty(TopComponent.PROP_MAXIMIZATION_DISABLED, Boolean.TRUE);
 
@@ -97,6 +93,14 @@ public final class WelcomeTopComponent extends TopComponent {
         loadMRU();
         loadSamples();
         loadPrefs();
+    }
+
+    private void closeDialog() {
+        Container container = this;
+        for (; !(container instanceof JDialog);) {
+            container = container.getParent();
+        }
+        container.setVisible(false);
     }
 
     private void initAction() {
@@ -121,7 +125,7 @@ public final class WelcomeTopComponent extends TopComponent {
                         importController.importFile(fileObject);
                     }
                 }
-                WelcomeTopComponent.this.close();
+                closeDialog();
             }
         };
         newProjectLink.addActionListener(new ActionListener() {
@@ -129,7 +133,7 @@ public final class WelcomeTopComponent extends TopComponent {
             public void actionPerformed(ActionEvent e) {
                 ProjectControllerUI pc = Lookup.getDefault().lookup(ProjectControllerUI.class);
                 pc.newProject();
-                WelcomeTopComponent.this.close();
+                closeDialog();
             }
         });
         openFileLink.addActionListener(new ActionListener() {
@@ -137,7 +141,7 @@ public final class WelcomeTopComponent extends TopComponent {
             public void actionPerformed(ActionEvent e) {
                 ProjectControllerUI pc = Lookup.getDefault().lookup(ProjectControllerUI.class);
                 pc.openFile();
-                WelcomeTopComponent.this.close();
+                closeDialog();
             }
         });
     }
@@ -191,7 +195,7 @@ public final class WelcomeTopComponent extends TopComponent {
                         }
                         ImportControllerUI importController = Lookup.getDefault().lookup(ImportControllerUI.class);
                         importController.importStream(stream, importer);
-                        WelcomeTopComponent.this.close();
+                        closeDialog();
                     }
                 });
                 fileLink.setText(fileName);
@@ -215,15 +219,10 @@ public final class WelcomeTopComponent extends TopComponent {
         });
     }
 
-    @Override
-    public Action[] getActions() {
-        return new Action[0];
-    }
-
-    /** This method is called from within the constructor to
-     * initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is
-     * always regenerated by the Form Editor.
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
      */
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -241,6 +240,7 @@ public final class WelcomeTopComponent extends TopComponent {
         openOnStartupCheckbox = new javax.swing.JCheckBox();
 
         setOpaque(true);
+        setPreferredSize(new java.awt.Dimension(679, 379));
         setLayout(new java.awt.BorderLayout());
 
         header.setIcon(new javax.swing.ImageIcon(getClass().getResource("/org/gephi/desktop/welcome/resources/logo_transparent_small.png"))); // NOI18N
@@ -280,14 +280,16 @@ public final class WelcomeTopComponent extends TopComponent {
                     .addComponent(labelRecent))
                 .addGap(18, 18, 18)
                 .addGroup(mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(labelNew)
-                    .addComponent(labelSamples)
-                    .addComponent(samplesPanel, javax.swing.GroupLayout.DEFAULT_SIZE, 162, Short.MAX_VALUE)
+                    .addComponent(samplesPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(mainPanelLayout.createSequentialGroup()
-                        .addGap(10, 10, 10)
                         .addGroup(mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(openFileLink, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(newProjectLink, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(labelNew)
+                            .addComponent(labelSamples)
+                            .addGroup(mainPanelLayout.createSequentialGroup()
+                                .addGap(10, 10, 10)
+                                .addGroup(mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(openFileLink, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(newProjectLink, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                         .addGap(62, 62, 62)))
                 .addContainerGap())
         );
@@ -319,7 +321,6 @@ public final class WelcomeTopComponent extends TopComponent {
         southPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT));
 
         org.openide.awt.Mnemonics.setLocalizedText(openOnStartupCheckbox, org.openide.util.NbBundle.getMessage(WelcomeTopComponent.class, "WelcomeTopComponent.openOnStartupCheckbox.text")); // NOI18N
-        openOnStartupCheckbox.setOpaque(false);
         southPanel.add(openOnStartupCheckbox);
 
         add(southPanel, java.awt.BorderLayout.SOUTH);
@@ -337,75 +338,4 @@ public final class WelcomeTopComponent extends TopComponent {
     private javax.swing.JPanel samplesPanel;
     private javax.swing.JPanel southPanel;
     // End of variables declaration//GEN-END:variables
-
-    /**
-     * Gets default instance. Do not use directly: reserved for *.settings files only,
-     * i.e. deserialization routines; otherwise you could get a non-deserialized instance.
-     * To obtain the singleton instance, use {@link #findInstance}.
-     */
-    public static synchronized WelcomeTopComponent getDefault() {
-        if (instance == null) {
-            instance = new WelcomeTopComponent();
-        }
-        return instance;
-    }
-
-    /**
-     * Obtain the WelcomeTopComponent instance. Never call {@link #getDefault} directly!
-     */
-    public static synchronized WelcomeTopComponent findInstance() {
-        TopComponent win = WindowManager.getDefault().findTopComponent(PREFERRED_ID);
-        if (win == null) {
-            Logger.getLogger(WelcomeTopComponent.class.getName()).warning(
-                    "Cannot find " + PREFERRED_ID + " component. It will not be located properly in the window system.");
-            return getDefault();
-        }
-        if (win instanceof WelcomeTopComponent) {
-            return (WelcomeTopComponent) win;
-        }
-        Logger.getLogger(WelcomeTopComponent.class.getName()).warning(
-                "There seem to be multiple components with the '" + PREFERRED_ID
-                + "' ID. That is a potential source of errors and unexpected behavior.");
-        return getDefault();
-    }
-
-    @Override
-    public int getPersistenceType() {
-        return TopComponent.PERSISTENCE_ALWAYS;
-    }
-
-    @Override
-    public void componentOpened() {
-        // TODO add custom code on component opening
-    }
-
-    @Override
-    public void componentClosed() {
-        // TODO add custom code on component closing
-    }
-
-    void writeProperties(java.util.Properties p) {
-        // better to version settings since initial version as advocated at
-        // http://wiki.apidesign.org/wiki/PropertyFiles
-        p.setProperty("version", "1.0");
-        // TODO store your settings
-    }
-
-    Object readProperties(java.util.Properties p) {
-        if (instance == null) {
-            instance = this;
-        }
-        instance.readPropertiesImpl(p);
-        return instance;
-    }
-
-    private void readPropertiesImpl(java.util.Properties p) {
-        String version = p.getProperty("version");
-        // TODO read your settings according to their version
-    }
-
-    @Override
-    protected String preferredID() {
-        return PREFERRED_ID;
-    }
 }

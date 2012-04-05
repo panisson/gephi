@@ -1,59 +1,52 @@
 /*
-Copyright 2008-2010 Gephi
-Authors : Mathieu Bastian <mathieu.bastian@gephi.org>
-Website : http://www.gephi.org
+ Copyright 2008-2010 Gephi
+ Authors : Mathieu Bastian <mathieu.bastian@gephi.org>
+ Website : http://www.gephi.org
 
-This file is part of Gephi.
+ This file is part of Gephi.
 
-DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 
-Copyright 2011 Gephi Consortium. All rights reserved.
+ Copyright 2011 Gephi Consortium. All rights reserved.
 
-The contents of this file are subject to the terms of either the GNU
-General Public License Version 3 only ("GPL") or the Common
-Development and Distribution License("CDDL") (collectively, the
-"License"). You may not use this file except in compliance with the
-License. You can obtain a copy of the License at
-http://gephi.org/about/legal/license-notice/
-or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
-specific language governing permissions and limitations under the
-License.  When distributing the software, include this License Header
-Notice in each file and include the License files at
-/cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
-License Header, with the fields enclosed by brackets [] replaced by
-your own identifying information:
-"Portions Copyrighted [year] [name of copyright owner]"
+ The contents of this file are subject to the terms of either the GNU
+ General Public License Version 3 only ("GPL") or the Common
+ Development and Distribution License("CDDL") (collectively, the
+ "License"). You may not use this file except in compliance with the
+ License. You can obtain a copy of the License at
+ http://gephi.org/about/legal/license-notice/
+ or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
+ specific language governing permissions and limitations under the
+ License.  When distributing the software, include this License Header
+ Notice in each file and include the License files at
+ /cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
+ License Header, with the fields enclosed by brackets [] replaced by
+ your own identifying information:
+ "Portions Copyrighted [year] [name of copyright owner]"
 
-If you wish your version of this file to be governed by only the CDDL
-or only the GPL Version 3, indicate your decision by adding
-"[Contributor] elects to include this software in this distribution
-under the [CDDL or GPL Version 3] license." If you do not indicate a
-single choice of license, a recipient has the option to distribute
-your version of this file under either the CDDL, the GPL Version 3 or
-to extend the choice of license to its licensees as provided above.
-However, if you add GPL Version 3 code and therefore, elected the GPL
-Version 3 license, then the option applies only if the new code is
-made subject to such option by the copyright holder.
+ If you wish your version of this file to be governed by only the CDDL
+ or only the GPL Version 3, indicate your decision by adding
+ "[Contributor] elects to include this software in this distribution
+ under the [CDDL or GPL Version 3] license." If you do not indicate a
+ single choice of license, a recipient has the option to distribute
+ your version of this file under either the CDDL, the GPL Version 3 or
+ to extend the choice of license to its licensees as provided above.
+ However, if you add GPL Version 3 code and therefore, elected the GPL
+ Version 3 license, then the option applies only if the new code is
+ made subject to such option by the copyright holder.
 
-Contributor(s):
+ Contributor(s):
 
-Portions Copyrighted 2011 Gephi Consortium.
-*/
+ Portions Copyrighted 2011 Gephi Consortium.
+ */
 package org.gephi.filters;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import org.gephi.filters.spi.ComplexFilter;
-import org.gephi.filters.spi.EdgeFilter;
-import org.gephi.filters.spi.Filter;
-import org.gephi.filters.spi.NodeFilter;
-import org.gephi.filters.spi.Operator;
-import org.gephi.graph.api.Edge;
-import org.gephi.graph.api.Graph;
-import org.gephi.graph.api.GraphModel;
-import org.gephi.graph.api.GraphView;
-import org.gephi.graph.api.HierarchicalGraph;
-import org.gephi.graph.api.Node;
+import org.gephi.filters.api.Range;
+import org.gephi.filters.spi.*;
+import org.gephi.graph.api.*;
 
 /**
  *
@@ -87,13 +80,17 @@ public class FilterProcessor {
             } else if (q instanceof OperatorQueryImpl && ((OperatorQueryImpl) q).isSimple()) {
                 OperatorQueryImpl operatorQuery = (OperatorQueryImpl) q;
                 Operator op = (Operator) operatorQuery.getFilter();
-                Filter[] filters = new Filter[operatorQuery.getChildrenCount()];
-                for (int k = 0; k < filters.length; k++) {
-                    filters[k] = operatorQuery.getChildAt(k).getFilter();
-                }
                 GraphView newView = graphModel.newView();
                 views.add(newView);
-                q.setResult(op.filter(graphModel.getGraph(newView), filters));
+                Graph newGraph = graphModel.getGraph(newView);
+                List<Filter> filters = new ArrayList<Filter>();
+                for (int k = 0; k < operatorQuery.getChildrenCount(); k++) {
+                    Filter filter = operatorQuery.getChildAt(k).getFilter();
+                    if (init(filter, newGraph)) {
+                        filters.add(filter);
+                    }
+                }
+                q.setResult(op.filter(newGraph, filters.toArray(new Filter[0])));
             } else {
                 FilterQueryImpl filterQuery = (FilterQueryImpl) q;
                 Filter filter = filterQuery.getFilter();
@@ -106,6 +103,9 @@ public class FilterProcessor {
                     q.setResult(input[0]);
                 } else if (filter instanceof EdgeFilter) {
                     processEdgeFilter((EdgeFilter) filter, input[0]);
+                    q.setResult(input[0]);
+                } else if (filter instanceof AttributableFilter) {
+                    processAttributableFilter((AttributableFilter) filter, input[0]);
                     q.setResult(input[0]);
                 } else if (filter instanceof ComplexFilter) {
                     ComplexFilter cf = (ComplexFilter) filter;
@@ -127,8 +127,52 @@ public class FilterProcessor {
         return finalResult;
     }
 
+    private void processAttributableFilter(AttributableFilter attributableFilter, Graph graph) {
+        if (((AttributableFilter) attributableFilter).getType().equals(AttributableFilter.Type.NODE)) {
+            if (init(attributableFilter, graph)) {
+                List<Node> nodesToRemove = new ArrayList<Node>();
+                for (Node n : graph.getNodes()) {
+                    if (!attributableFilter.evaluate(graph, n)) {
+                        nodesToRemove.add(n);
+                    }
+                }
+
+                for (Node n : nodesToRemove) {
+                    graph.removeNode(n);
+                }
+                attributableFilter.finish();
+            }
+        } else {
+            HierarchicalGraph hgraph = (HierarchicalGraph) graph;
+            if (init(attributableFilter, graph)) {
+                List<Edge> edgesToRemove = new ArrayList<Edge>();
+                for (Edge e : hgraph.getEdges()) {
+                    if (!attributableFilter.evaluate(hgraph, e)) {
+                        edgesToRemove.add(e);
+                    }
+                }
+
+                for (Edge e : edgesToRemove) {
+                    hgraph.removeEdge(e);
+                }
+                edgesToRemove.clear();
+
+                for (Edge e : hgraph.getMetaEdges()) {
+                    if (!attributableFilter.evaluate(hgraph, e)) {
+                        edgesToRemove.add(e);
+                    }
+                }
+                for (Edge e : edgesToRemove) {
+                    hgraph.removeMetaEdge(e);
+                }
+
+                attributableFilter.finish();
+            }
+        }
+    }
+
     private void processNodeFilter(NodeFilter nodeFilter, Graph graph) {
-        if (nodeFilter.init(graph)) {
+        if (init(nodeFilter, graph)) {
             List<Node> nodesToRemove = new ArrayList<Node>();
             for (Node n : graph.getNodes()) {
                 if (!nodeFilter.evaluate(graph, n)) {
@@ -145,7 +189,7 @@ public class FilterProcessor {
 
     private void processEdgeFilter(EdgeFilter edgeFilter, Graph graph) {
         HierarchicalGraph hgraph = (HierarchicalGraph) graph;
-        if (edgeFilter.init(hgraph)) {
+        if (init(edgeFilter, graph)) {
             List<Edge> edgesToRemove = new ArrayList<Edge>();
             for (Edge e : hgraph.getEdges()) {
                 if (!edgeFilter.evaluate(hgraph, e)) {
@@ -177,7 +221,7 @@ public class FilterProcessor {
             if (q instanceof OperatorQueryImpl && q.getChildrenCount() > 0) {
                 boolean canSimplify = true;
                 for (AbstractQueryImpl child : q.children) {
-                    if (child.getChildrenCount() > 0 || !(child.getFilter() instanceof NodeFilter || child.getFilter() instanceof EdgeFilter)) {
+                    if (child.getChildrenCount() > 0 || !(child.getFilter() instanceof NodeFilter || child.getFilter() instanceof EdgeFilter || child.getFilter() instanceof AttributableFilter)) {
                         canSimplify = false;
                     }
                 }
@@ -202,5 +246,119 @@ public class FilterProcessor {
             }
         }
         return tree.toArray(new AbstractQueryImpl[0]);
+    }
+
+    public boolean init(Filter filter, Graph graph) {
+        boolean res = true;
+
+        //Init res
+        if (filter instanceof NodeFilter) {
+            res = ((NodeFilter) filter).init(graph);
+        } else if (filter instanceof EdgeFilter) {
+            res = ((EdgeFilter) filter).init(graph);
+        } else if (filter instanceof NodeFilter) {
+            res = ((AttributableFilter) filter).init(graph);
+        }
+
+        //Range
+        if (filter instanceof RangeFilter) {
+            RangeFilter rangeFilter = (RangeFilter) filter;
+            Number[] values = rangeFilter.getValues(graph);
+            NumberComparator comparator = new NumberComparator();
+            Number min = null;
+            Number max = null;
+            if (values != null) {
+                for (Number n : values) {
+                    min = min == null ? n : comparator.min(min, n);
+                    max = max == null ? n : comparator.max(max, n);
+                }
+            }
+
+            Range previousRange = (Range) rangeFilter.getRangeProperty().getValue();
+            Range newRange;
+            if (min == null || max == null) {
+                newRange = null;
+                rangeFilter.getRangeProperty().setValue(newRange);
+            } else {
+                if (previousRange == null) {
+                    newRange = new Range(min, max, min, max, values);
+                    rangeFilter.getRangeProperty().setValue(newRange);
+                } else if(previousRange != null && (previousRange.getMinimum() == null || previousRange.getMaximum() == null)) {
+                    //Opening projects
+                    newRange = new Range(previousRange.getLowerBound(), previousRange.getUpperBound(), min, max, previousRange.isLeftInclusive(), previousRange.isRightInclusive(), values);
+                    rangeFilter.getRangeProperty().setValue(newRange);
+                } else {
+                    //Collect some info
+                    boolean stickyLeft = previousRange.getMinimum().equals(previousRange.getLowerBound());
+                    boolean stickyRight = previousRange.getMaximum().equals(previousRange.getUpperBound());
+                    Number lowerBound = previousRange.getLowerBound();
+                    Number upperBound = previousRange.getUpperBound();
+
+                    //The inteval grows on the right
+                    if (stickyRight && comparator.superior(max, upperBound)) {
+                        upperBound = max;
+                    }
+
+                    //The interval grows on the left
+                    if (stickyLeft && comparator.inferior(min, lowerBound)) {
+                        lowerBound = min;
+                    }
+
+                    //The interval shrinks on the right
+                    if (comparator.superior(upperBound, max)) {
+                        upperBound = max;
+                    }
+
+                    //The interval shrinks on the left
+                    if (comparator.inferior(lowerBound, min)) {
+                        lowerBound = min;
+                    }
+
+                    newRange = new Range(lowerBound, upperBound, min, max, previousRange.isLeftInclusive(), previousRange.isRightInclusive(), values);
+                    if (!newRange.equals(previousRange)) {
+                        rangeFilter.getRangeProperty().setValue(newRange);
+                    }
+                }
+            }
+        }
+
+        return res;
+    }
+
+    private static class NumberComparator implements Comparator<Number> {
+
+        public boolean superior(Number a, Number b) {
+            return compare(a, b) > 0;
+        }
+
+        public boolean inferior(Number a, Number b) {
+            return compare(a, b) < 0;
+        }
+
+        public Number min(Number a, Number b) {
+            int c = compare(a, b);
+            return c < 0 ? a : b;
+        }
+
+        public Number max(Number a, Number b) {
+            int c = compare(a, b);
+            return c > 0 ? a : b;
+        }
+
+        public int compare(Number number1, Number number2) {
+            if (((Object) number2).getClass().equals(((Object) number1).getClass())) {
+                if (number1 instanceof Comparable) {
+                    return ((Comparable) number1).compareTo(number2);
+                }
+            }
+            // for all different Number types, let's check there double values
+            if (number1.doubleValue() < number2.doubleValue()) {
+                return -1;
+            }
+            if (number1.doubleValue() > number2.doubleValue()) {
+                return 1;
+            }
+            return 0;
+        }
     }
 }

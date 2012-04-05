@@ -2,7 +2,7 @@
 <!-- You may freely edit this file. See harness/README in the NetBeans platform -->
 <!-- for some information on what you could do (e.g. targets to override). -->
 <!-- If you delete this file and reopen the project it will be recreated. -->
-<project name="0.8" basedir="." default="build-all">
+<project name="0.8.1" basedir="." default="build-all">
 
     <description>Builds the module suite 0.8.</description>
     <import file="nbproject/build-impl.xml"/>
@@ -20,17 +20,6 @@
 	<!-- Build both windows and mac on a mac and only windows on a windows -->
     <target name="build-all" depends="clean, build-zip, build-mac">
         <echo message="Build completed. The files are available in the 'dist' folder."/>
-    </target>
-
-	<!-- Download the latest stable relese of the platform, including the JUnit plugin -->
-    <target name="download-platform">
-        <property name="platform.netbeans.version" value="7.0.1"/>
-        <taskdef name="autoupdate" classname="org.netbeans.nbbuild.AutoUpdate" classpath="${nbplatform.active.dir}/harness/tasks.jar"/>
-        <autoupdate installdir="${nbplatform.active.dir}" updatecenter="http://updates.netbeans.org/netbeans/updates/${platform.netbeans.version}/uc/final/certified/catalog.xml.gz" force="false">
-            <modules includes=".*junit.*" clusters="platform[0-9]*"/>
-            <modules includes=".*" clusters="harness[0-9]*"/>
-            <modules includes=".*" clusters="platform[0-9]*"/>
-        </autoupdate>
     </target>
 
     <target name="build-launchers" depends="suite.build-launchers">
@@ -105,8 +94,8 @@
     </target>
 
     <target name="download-l10n-jars" description="Download Netbeans Platform Localization JARs on the website">
-        <property name="l10n.url" value="http://netbeans.org/project_downloads/nblocalization/7.0/"/>
-        <property name="l10n.file" value="nb70_platform_l10n.zip"/>
+        <property name="l10n.url" value="http://netbeans.org/project_downloads/nblocalization/7.1/"/>
+        <property name="l10n.file" value="nb71_platform_l10n.zip"/>
         <property name="l10n.dir" value="l10n"/>
         <get src="${l10n.url}${l10n.file}" dest="${dist.dir}" verbose="true" skipexisting="true" ignoreerrors="true"/>   
         <available file="${dist.dir}/${l10n.file}" property="l10n.exists"/>
@@ -307,6 +296,8 @@
             <service type="org.gephi.project.spi.WorkspaceDuplicateProvider">
                 <provider classname="org.gephi.data.attributes.AttributeModelDuplicateProvider"/>
                 <provider classname="org.gephi.graph.dhns.DhnsDuplicateProvider"/>
+                <provider classname="org.gephi.dynamic.DynamicModelDuplicateProvider"/>
+                <provider classname="org.gephi.preview.PreviewWorkspaceDuplicateProvider"/>
             </service>
                 
             <!-- These are services from core.startup modules. We disable them because they deal with the startup only -->

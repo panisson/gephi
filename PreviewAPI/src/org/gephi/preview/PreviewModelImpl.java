@@ -1,65 +1,55 @@
 /*
-Copyright 2008-2011 Gephi
-Authors : Mathieu Bastian
-Website : http://www.gephi.org
+ Copyright 2008-2011 Gephi
+ Authors : Mathieu Bastian
+ Website : http://www.gephi.org
 
-This file is part of Gephi.
+ This file is part of Gephi.
 
-DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
+ DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
 
-Copyright 2011 Gephi Consortium. All rights reserved.
+ Copyright 2011 Gephi Consortium. All rights reserved.
 
-The contents of this file are subject to the terms of either the GNU
-General Public License Version 3 only ("GPL") or the Common
-Development and Distribution License("CDDL") (collectively, the
-"License"). You may not use this file except in compliance with the
-License. You can obtain a copy of the License at
-http://gephi.org/about/legal/license-notice/
-or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
-specific language governing permissions and limitations under the
-License.  When distributing the software, include this License Header
-Notice in each file and include the License files at
-/cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
-License Header, with the fields enclosed by brackets [] replaced by
-your own identifying information:
-"Portions Copyrighted [year] [name of copyright owner]"
+ The contents of this file are subject to the terms of either the GNU
+ General Public License Version 3 only ("GPL") or the Common
+ Development and Distribution License("CDDL") (collectively, the
+ "License"). You may not use this file except in compliance with the
+ License. You can obtain a copy of the License at
+ http://gephi.org/about/legal/license-notice/
+ or /cddl-1.0.txt and /gpl-3.0.txt. See the License for the
+ specific language governing permissions and limitations under the
+ License.  When distributing the software, include this License Header
+ Notice in each file and include the License files at
+ /cddl-1.0.txt and /gpl-3.0.txt. If applicable, add the following below the
+ License Header, with the fields enclosed by brackets [] replaced by
+ your own identifying information:
+ "Portions Copyrighted [year] [name of copyright owner]"
 
-If you wish your version of this file to be governed by only the CDDL
-or only the GPL Version 3, indicate your decision by adding
-"[Contributor] elects to include this software in this distribution
-under the [CDDL or GPL Version 3] license." If you do not indicate a
-single choice of license, a recipient has the option to distribute
-your version of this file under either the CDDL, the GPL Version 3 or
-to extend the choice of license to its licensees as provided above.
-However, if you add GPL Version 3 code and therefore, elected the GPL
-Version 3 license, then the option applies only if the new code is
-made subject to such option by the copyright holder.
+ If you wish your version of this file to be governed by only the CDDL
+ or only the GPL Version 3, indicate your decision by adding
+ "[Contributor] elects to include this software in this distribution
+ under the [CDDL or GPL Version 3] license." If you do not indicate a
+ single choice of license, a recipient has the option to distribute
+ your version of this file under either the CDDL, the GPL Version 3 or
+ to extend the choice of license to its licensees as provided above.
+ However, if you add GPL Version 3 code and therefore, elected the GPL
+ Version 3 license, then the option applies only if the new code is
+ made subject to such option by the copyright holder.
 
-Contributor(s):
+ Contributor(s):
 
-Portions Copyrighted 2011 Gephi Consortium.
+ Portions Copyrighted 2011 Gephi Consortium.
  */
 package org.gephi.preview;
 
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Point;
-import java.beans.PropertyEditor;
 import java.beans.PropertyEditorManager;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.*;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
-import org.gephi.preview.api.Item;
-import org.gephi.preview.api.PreviewModel;
-import org.gephi.preview.api.PreviewProperties;
-import org.gephi.preview.api.PreviewProperty;
+import org.gephi.preview.api.*;
 import org.gephi.preview.presets.DefaultPreset;
 import org.gephi.preview.spi.Renderer;
 import org.gephi.preview.types.DependantColor;
@@ -69,7 +59,6 @@ import org.gephi.preview.types.propertyeditors.BasicDependantColorPropertyEditor
 import org.gephi.preview.types.propertyeditors.BasicDependantOriginalColorPropertyEditor;
 import org.gephi.preview.types.propertyeditors.BasicEdgeColorPropertyEditor;
 import org.gephi.project.api.Workspace;
-import org.openide.util.Exceptions;
 import org.openide.util.Lookup;
 
 /**
@@ -78,10 +67,13 @@ import org.openide.util.Lookup;
  */
 public class PreviewModelImpl implements PreviewModel {
 
+    private final PreviewController previewController;
     private final Workspace workspace;
     //Items
     private final Map<String, List<Item>> typeMap;
     private final Map<Object, Object> sourceMap;
+    //Renderers
+    private ManagedRenderer[] managedRenderers;
     //Properties
     private PreviewProperties properties;
     //Dimensions
@@ -89,11 +81,21 @@ public class PreviewModelImpl implements PreviewModel {
     private Point topLeftPosition;
 
     public PreviewModelImpl(Workspace workspace) {
+        this(workspace, null);
+    }
+
+    public PreviewModelImpl(Workspace workspace, PreviewController previewController) {
+        if (previewController != null) {
+            this.previewController = previewController;
+        } else {
+            this.previewController = Lookup.getDefault().lookup(PreviewController.class);
+        }
         typeMap = new HashMap<String, List<Item>>();
         sourceMap = new HashMap<Object, Object>();
         this.workspace = workspace;
 
         initBasicPropertyEditors();
+        initManagedRenderers();
     }
 
     /**
@@ -111,12 +113,33 @@ public class PreviewModelImpl implements PreviewModel {
         }
     }
 
+    /**
+     * Makes sure that, if more than one plugin extends a default renderer, only the one with the lowest position is enabled initially.
+     */
+    private void initManagedRenderers() {
+        Renderer[] registeredRenderers = previewController.getRegisteredRenderers();
+
+        Set<String> replacedRenderers = new HashSet<String>();
+
+        managedRenderers = new ManagedRenderer[registeredRenderers.length];
+        for (int i = 0; i < registeredRenderers.length; i++) {
+            Renderer r = registeredRenderers[i];
+            Class superClass = r.getClass().getSuperclass();
+            if (superClass != null && superClass.getName().startsWith("org.gephi.preview.plugin.renderers.")) {
+                managedRenderers[i] = new ManagedRenderer(r, !replacedRenderers.contains(superClass.getName()));
+                replacedRenderers.add(superClass.getName());
+            } else {
+                managedRenderers[i] = new ManagedRenderer(r, true);
+            }
+        }
+    }
+
     private synchronized void initProperties() {
         if (properties == null) {
             properties = new PreviewProperties();
 
             //Properties from renderers
-            for (Renderer renderer : Lookup.getDefault().lookupAll(Renderer.class)) {
+            for (Renderer renderer : getManagedEnabledRenderers()) {
                 PreviewProperty[] props = renderer.getProperties();
                 for (PreviewProperty p : props) {
                     properties.addProperty(p);
@@ -252,6 +275,91 @@ public class PreviewModelImpl implements PreviewModel {
         this.topLeftPosition = topLeftPosition;
     }
 
+    @Override
+    public ManagedRenderer[] getManagedRenderers() {
+        return managedRenderers;
+    }
+
+    /**
+     * Makes sure that managedRenderers contains every renderer existing implementations. If some renderers are not in the list, they are added in default implementation order at the end of the list
+     * and not enabled.
+     */
+    private void completeManagedRenderersListIfNecessary() {
+        if (managedRenderers != null) {
+            Set<Renderer> existing = new HashSet<Renderer>();
+            for (ManagedRenderer mr : managedRenderers) {
+                existing.add(mr.getRenderer());
+            }
+
+            List<ManagedRenderer> completeManagedRenderersList = new ArrayList<ManagedRenderer>();
+            completeManagedRenderersList.addAll(Arrays.asList(managedRenderers));
+
+            for (Renderer renderer : previewController.getRegisteredRenderers()) {
+                if (!existing.contains(renderer)) {
+                    completeManagedRenderersList.add(new ManagedRenderer(renderer, false));
+                }
+            }
+
+            managedRenderers = completeManagedRenderersList.toArray(new ManagedRenderer[0]);
+        }
+    }
+
+    /**
+     * Removes unnecessary properties from not enabled renderers
+     */
+    private void reloadProperties() {
+        PreviewProperties oldProperties = getProperties();
+
+        properties = new PreviewProperties();
+
+        //Properties from renderers
+        for (Renderer renderer : getManagedEnabledRenderers()) {
+            PreviewProperty[] props = renderer.getProperties();
+            for (PreviewProperty p : props) {
+                properties.addProperty(p);
+            }
+        }
+
+        for (PreviewProperty property : oldProperties.getProperties()) {
+            if (properties.hasProperty(property.getName())) {
+                properties.putValue(property.getName(), property.getValue());
+            }
+        }
+        
+        for(Entry<String, Object> property: oldProperties.getSimpleValues()){
+            properties.putValue(property.getKey(), property.getValue());
+        }
+    }
+
+    @Override
+    public void setManagedRenderers(ManagedRenderer[] managedRenderers) {
+        //Validate no null ManagedRenderers
+        for (int i = 0; i < managedRenderers.length; i++) {
+            if (managedRenderers[i] == null) {
+                throw new IllegalArgumentException("managedRenderers should not contains null values");
+            }
+        }
+
+        this.managedRenderers = managedRenderers;
+        completeManagedRenderersListIfNecessary();
+        reloadProperties();
+    }
+
+    @Override
+    public Renderer[] getManagedEnabledRenderers() {
+        if (managedRenderers != null) {
+            ArrayList<Renderer> renderers = new ArrayList<Renderer>();
+            for (ManagedRenderer mr : managedRenderers) {
+                if (mr.isEnabled()) {
+                    renderers.add(mr.getRenderer());
+                }
+            }
+            return renderers.toArray(new Renderer[0]);
+        } else {
+            return null;
+        }
+    }
+
     //PERSISTENCE
     public void writeXML(XMLStreamWriter writer) throws XMLStreamException {
         writer.writeStartElement("previewmodel");
@@ -261,7 +369,7 @@ public class PreviewModelImpl implements PreviewModel {
             String propertyName = property.getName();
             Object propertyValue = property.getValue();
             if (propertyValue != null) {
-                String text = getValueAsText(propertyValue);
+                String text = PreviewProperties.getValueAsText(propertyValue);
                 if (text != null) {
                     writer.writeStartElement("previewproperty");
                     writer.writeAttribute("name", propertyName);
@@ -285,7 +393,7 @@ public class PreviewModelImpl implements PreviewModel {
             Object value = simpleValueEntry.getValue();
             if (value != null) {
                 Class clazz = value.getClass();
-                String text = getValueAsText(value);
+                String text = PreviewProperties.getValueAsText(value);
                 if (text != null) {
                     writer.writeStartElement("previewsimplevalue");
                     writer.writeAttribute("name", simpleValueEntry.getKey());
@@ -296,6 +404,17 @@ public class PreviewModelImpl implements PreviewModel {
             }
         }
 
+        //Write model managed renderers:
+        if (managedRenderers != null) {
+            for (ManagedRenderer managedRenderer : managedRenderers) {
+                writer.writeStartElement("managedrenderer");
+                writer.writeAttribute("class", managedRenderer.getRenderer().getClass().getName());
+                writer.writeAttribute("enabled", String.valueOf(managedRenderer.isEnabled()));
+                writer.writeEndElement();
+            }
+        }
+
+
         writer.writeEndElement();
     }
 
@@ -305,6 +424,16 @@ public class PreviewModelImpl implements PreviewModel {
         String propName = null;
         boolean isSimpleValue = false;
         String simpleValueClass = null;
+
+        List<ManagedRenderer> managedRenderersList = new ArrayList<ManagedRenderer>();
+        Map<String, Renderer> availableRenderers = new HashMap<String, Renderer>();
+        for (Renderer renderer : Lookup.getDefault().lookupAll(Renderer.class)) {
+            availableRenderers.put(renderer.getClass().getName(), renderer);
+            Class superClass = renderer.getClass().getSuperclass();
+            if (superClass != null && superClass.getName().startsWith("org.gephi.preview.plugin.renderers.")) {
+                availableRenderers.put(superClass.getName(), renderer);//For plugins replacing a default renderer
+            }
+        }
 
         boolean end = false;
         while (reader.hasNext() && !end) {
@@ -320,6 +449,11 @@ public class PreviewModelImpl implements PreviewModel {
                         propName = reader.getAttributeValue(null, "name");
                         simpleValueClass = reader.getAttributeValue(null, "class");
                         isSimpleValue = true;
+                    } else if ("managedrenderer".equalsIgnoreCase(name)) {
+                        String rendererClass = reader.getAttributeValue(null, "class");
+                        if (availableRenderers.containsKey(rendererClass)) {
+                            managedRenderersList.add(new ManagedRenderer(availableRenderers.get(rendererClass), Boolean.parseBoolean(reader.getAttributeValue(null, "enabled"))));
+                        }
                     }
                     break;
                 case XMLStreamReader.CHARACTERS:
@@ -328,9 +462,7 @@ public class PreviewModelImpl implements PreviewModel {
                             if (!isSimpleValue) {//Read PreviewProperty:
                                 PreviewProperty p = props.getProperty(propName);
                                 if (p != null) {
-                                    Object value = readValueFromText(reader.getText(), p.getType());
-                                    PropertyEditor editor = PropertyEditorManager.findEditor(p.getType());
-                                    editor.setAsText(reader.getText());
+                                    Object value = PreviewProperties.readValueFromText(reader.getText(), p.getType());
                                     if (value != null) {
                                         try {
                                             p.setValue(value);
@@ -344,7 +476,7 @@ public class PreviewModelImpl implements PreviewModel {
                                     if (!propName.equals("width")
                                             && !propName.equals("height")) {
                                         try {
-                                            Object value = readValueFromText(reader.getText(), Class.forName(simpleValueClass));
+                                            Object value = PreviewProperties.readValueFromText(reader.getText(), Class.forName(simpleValueClass));
                                             if (value != null) {
                                                 props.putValue(propName, value);
                                             }
@@ -366,39 +498,9 @@ public class PreviewModelImpl implements PreviewModel {
                     break;
             }
         }
-    }
 
-    private String getValueAsText(Object value) {
-        if (value.getClass().equals(Font.class)) {
-            Font f = (Font) value;
-            return String.format("%s-%d-%d", f.getName(), f.getStyle(), f.getSize()); //bug 551877
-        } else {
-            PropertyEditor editor = PropertyEditorManager.findEditor(value.getClass());
-            if (editor != null) {
-                editor.setValue(value);
-                return editor.getAsText();
-            } else {
-                return null;
-            }
-        }
-    }
-
-    private Object readValueFromText(String valueStr, Class valueClass) {
-        if (valueClass.equals(Font.class)) {
-            try {
-                String parts[] = valueStr.split("-");
-                return new Font(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));//bug 551877
-            } catch (Exception e) {
-                return null;
-            }
-        } else {
-            PropertyEditor editor = PropertyEditorManager.findEditor(valueClass);
-            if (editor != null) {
-                editor.setAsText(valueStr);
-                return editor.getValue();
-            } else {
-                return null;
-            }
+        if (!managedRenderersList.isEmpty()) {
+            setManagedRenderers(managedRenderersList.toArray(new ManagedRenderer[0]));
         }
     }
 }
