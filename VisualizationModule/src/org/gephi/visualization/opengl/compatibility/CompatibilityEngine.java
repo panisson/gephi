@@ -46,17 +46,20 @@ import com.sun.opengl.util.texture.Texture;
 import com.sun.opengl.util.texture.TextureData;
 import com.sun.opengl.util.texture.TextureIO;
 import java.awt.Color;
+import java.awt.Toolkit;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import javax.imageio.ImageIO;
 import javax.media.opengl.GL;
 import javax.media.opengl.glu.GLU;
 import javax.media.opengl.glu.GLUquadric;
@@ -74,6 +77,7 @@ import org.gephi.visualization.apiimpl.Scheduler;
 import org.gephi.visualization.api.objects.CompatibilityModelClass;
 import org.gephi.visualization.selection.Cylinder;
 import org.gephi.visualization.selection.Rectangle;
+import org.openide.util.Lookup;
 
 /**
  *
@@ -453,7 +457,9 @@ public class CompatibilityEngine extends AbstractEngine {
     
     private void loadTexture(String textureFileName) {
         try {
-            InputStream stream = new FileInputStream(textureFileName);
+            InputStream stream = Lookup.getDefault().lookup(ClassLoader.class).getResourceAsStream(textureFileName);
+            if (stream == null)
+                stream = new FileInputStream(textureFileName);
             TextureData textureData = TextureIO.newTextureData(stream, false, TextureIO.JPG);
             background = TextureIO.newTexture(textureData);
             System.out.println("Background texture changed");
